@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <section class="dashboard-shell">
+        <h1>Dashboard</h1>
+        <p>Welcome back, {{ email }}.</p>
+        <div class="dashboard-grid">
+            <div class="panel">
+                <h2>Service Status</h2>
+                <ul>
+                    <li>Gmail: <strong>🔴 Disconnected</strong></li>
+                    <li>Telegram: <strong>🔴 Disconnected</strong></li>
+                </ul>
+            </div>
+            <div class="panel">
+                <h2>Inbox</h2>
+                <p>No messages yet. Connect a service to begin.</p>
+            </div>
+            <div class="panel">
+                <h2>Voice Assistant</h2>
+                <p>Use the voice panel to compose messages in future sprints.</p>
+            </div>
+        </div>
+    </section>
+{% endblock %}

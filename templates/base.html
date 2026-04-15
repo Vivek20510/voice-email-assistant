@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Voice Email Assistant</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+    <header class="site-header">
+        <div class="container">
+            <div class="brand">
+                <a href="/">Voice Email Assistant</a>
+            </div>
+            <nav class="site-nav">
+                {% if session.user_id %}
+                    <a href="/auth/dashboard">Dashboard</a>
+                    <a href="/auth/logout">Logout</a>
+                {% else %}
+                    <a href="/auth/login">Login</a>
+                    <a href="/auth/signup">Signup</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>Voice Email Assistant &copy; 2026</p>
+        </div>
+    </footer>
+</body>
+</html>
