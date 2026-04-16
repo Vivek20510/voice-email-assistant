@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <section class="settings-panel">
+        <h1>Settings</h1>
+        <div class="settings-grid">
+            <div class="panel">
+                <h2>Gmail</h2>
+                <p>Connect your Gmail account to sync messages and send email.</p>
+                <button type="button">Connect Gmail</button>
+            </div>
+            <div class="panel">
+                <h2>Telegram</h2>
+                <form class="settings-form">
+                    <label for="telegram-token">Telegram Bot Token</label>
+                    <input id="telegram-token" name="telegram_token" type="text" placeholder="Enter token" />
+                    <button type="button">Save Token</button>
+                </form>
+            </div>
+        </div>
+    </section>
+{% endblock %}

@@ -213,7 +213,7 @@
 - [ ] Prepare 2‑minute demo: POST `/auth/signup` in browser → user in DB → login → session active → dashboard.
 
 ### 🟢 Tummala (Backend Dev 2)
-- [ ] Fix any model FK or table creation bugs from integration.
+- [ ] Fix any model FK or table creation bugs from  integration.
 - [ ] Prepare 2‑minute demo: show all 5 tables in `sqlite3` CLI or DB browser.
 
 ### 🟠 Penke

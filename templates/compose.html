@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <section class="compose-panel">
+        <h1>Compose Message</h1>
+        <form class="compose-form">
+            <div class="form-row">
+                <label for="service">Service</label>
+                <select id="service" name="service">
+                    <option value="gmail">Gmail</option>
+                    <option value="telegram">Telegram</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label for="recipient">Recipient</label>
+                <input id="recipient" name="recipient" type="text" placeholder="Email or Telegram handle" />
+            </div>
+            <div class="form-row">
+                <label for="subject">Subject</label>
+                <input id="subject" name="subject" type="text" placeholder="Subject (Gmail only)" />
+            </div>
+            <div class="form-row">
+                <label for="message">Message</label>
+                <textarea id="message" name="message" rows="6" placeholder="Write your message here..."></textarea>
+            </div>
+            <button type="button">Send</button>
+        </form>
+
+        <div class="voice-panel">
+            <h2>Voice Dictation</h2>
+            <div class="voice-controls">
+                <button type="button">Record</button>
+                <button type="button">Stop</button>
+            </div>
+            <div class="voice-preview">
+                <h3>Transcription Preview</h3>
+                <p>No transcription available yet.</p>
+            </div>
+        </div>
+    </section>
+{% endblock %}
