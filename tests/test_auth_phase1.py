@@ -23,6 +23,18 @@ def test_login_invalid_credentials(client):
     assert response.json['error'] == 'Invalid credentials.'
 
 
+def test_signup_missing_fields(client):
+    response = client.post('/auth/signup', json={'email': 'invalid@example.com'})
+    assert response.status_code == 400
+    assert response.json['error'] == 'Email and password are required.'
+
+
+def test_login_missing_fields(client):
+    response = client.post('/auth/login', json={'password': 'P@ssw0rd'})
+    assert response.status_code == 400
+    assert response.json['error'] == 'Email and password are required.'
+
+
 def test_dashboard_requires_login(client):
     response = client.get('/auth/dashboard')
     assert response.status_code == 302

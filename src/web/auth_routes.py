@@ -97,3 +97,19 @@ def dashboard():
     if not session.get('user_id'):
         return redirect(url_for('auth.login'))
     return render_template('dashboard.html', email=session.get('user_email'))
+
+
+@auth_bp.route('/settings', methods=['GET'])
+def settings():
+    if not session.get('user_id'):
+        return redirect(url_for('auth.login'))
+
+    return render_template('settings.html', email=session.get('user_email'))
+
+
+@auth_bp.route('/compose', methods=['GET'])
+def compose():
+    if not session.get('user_id'):
+        return redirect(url_for('auth.login'))
+
+    return render_template('compose.html', email=session.get('user_email'))

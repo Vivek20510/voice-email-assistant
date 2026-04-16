@@ -17,6 +17,10 @@ def app():
         db.create_all()
         yield app
         db.session.remove()
+        try:
+            db.engine.dispose()
+        except Exception:
+            pass
 
 
 @pytest.fixture
