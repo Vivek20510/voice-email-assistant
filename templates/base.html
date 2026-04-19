@@ -1,41 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Voice Email Assistant</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css" />
 </head>
 <body>
+    <header class="site-header">
+        <div class="container">
+            <div class="brand">
+                <a href="/">Voice Email Assistant</a>
+            </div>
+            <nav class="site-nav">
+                {% if session.get('user_id') %}
+                    <span class="nav-badge-group">
+                        <span class="nav-badge">
+                            Inbox
+                            <span id="inbox-badge" class="badge-pill">0</span>
+                        </span>
+                        <span class="nav-badge">
+                            Drafts
+                            <span id="draft-badge" class="badge-pill">0</span>
+                        </span>
+                    </span>
+                    <a href="/auth/dashboard">Dashboard</a>
+                    <a href="/auth/compose">Compose</a>
+                    <a href="/auth/settings">Settings</a>
+                    <a href="/auth/logout">Logout</a>
+                    <span id="nav-avatar" class="nav-avatar">
+                        {{ (user_initials if user_initials is defined else (session.get('user_email', 've').split('@', 1)[0][:2])) | upper }}
+                    </span>
+                {% else %}
+                    <a href="/auth/login">Login</a>
+                    <a href="/auth/login?tab=register">Register</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
 
-<header class="site-header">
-    <div class="container header-wrap">
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
 
-        <!-- Empty Left Space -->
-        <div></div>
-
-        <!-- Show only after login -->
-        <nav class="site-nav">
-            {% if session['user_id'] %}
-                <a href="/auth/dashboard">Dashboard</a>
-                <a href="/auth/compose">Compose</a>
-                <a href="/auth/settings">Settings</a>
-                <a href="/auth/logout">Logout</a>
-            {% endif %}
-        </nav>
-
-    </div>
-</header>
-
-<main class="main-content">
-    {% block content %}{% endblock %}
-</main>
-
-<footer class="site-footer">
-    <div class="container">
-        <p>Voice Email Assistant &copy; 2026</p>
-    </div>
-</footer>
-
+    <footer class="site-footer">
+        <div class="container">
+            <p>Voice Email Assistant &copy; 2026</p>
+        </div>
+    </footer>
 </body>
 </html>

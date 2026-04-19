@@ -1,25 +1,149 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <section class="dashboard-shell">
-        <h1>Dashboard</h1>
-        <p>Welcome back, {{ email }}.</p>
-        <div class="dashboard-grid">
-            <div class="panel">
-                <h2>Service Status</h2>
+    <section
+        class="dashboard-shell dashboard-app"
+        data-dashboard-root
+        data-user-email="{{ email or '' }}"
+        data-user-initials="{{ user_initials or 'VE' }}"
+    >
+        <aside class="dashboard-rail">
+            <div class="dashboard-panel">
+                <p class="dashboard-eyebrow">Workspace</p>
+                <h1>Welcome back</h1>
+                <p>{{ email }}</p>
+            </div>
+
+            <div class="dashboard-panel">
+                <h2>Service status</h2>
                 <ul>
-                    <li>Gmail: <strong>🔴 Disconnected</strong></li>
-                    <li>Telegram: <strong>🔴 Disconnected</strong></li>
+                    <li>Gmail: <strong>{{ 'Connected' if services.gmail else 'Disconnected' }}</strong></li>
+                    <li>Telegram: <strong>{{ 'Connected' if services.telegram else 'Disconnected' }}</strong></li>
                 </ul>
             </div>
-            <div class="panel">
+        </aside>
+
+        <section class="dashboard-main">
+            <div id="stats-grid" class="stats-grid">
+                <article class="panel"><span>Total messages</span><strong id="stat-total">--</strong></article>
+                <article class="panel"><span>Unread</span><strong id="stat-unread">--</strong></article>
+                <article class="panel"><span>Sent today</span><strong id="stat-sent">--</strong></article>
+                <article class="panel"><span>AI replies</span><strong id="stat-ai">--</strong></article>
+            </div>
+
+            <div class="dashboard-panel">
                 <h2>Inbox</h2>
-                <p>No messages yet. Connect a service to begin.</p>
+                <p id="messages-state">Loading your inbox...</p>
+                <div id="messages-list" hidden></div>
             </div>
-            <div class="panel">
-                <h2>Voice Assistant</h2>
-                <p>Use the voice panel to compose messages in future sprints.</p>
+        </section>
+
+        <aside class="dashboard-side">
+            <div class="dashboard-panel">
+                <h2>AI search</h2>
+                <form id="ai-search-form">
+                    <input id="ai-query" name="query" type="text" placeholder="Search your inbox" />
+                    <button type="submit">Search</button>
+                </form>
+                <div id="ai-results"></div>
             </div>
-        </div>
+        </aside>
     </section>
+
+    <script>
+        (() => {
+            const root = document.querySelector('[data-dashboard-root]');
+            if (!root) {
+                return;
+            }
+
+            async function getJson(url, options) {
+                const response = await fetch(url, options);
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Request failed.');
+                }
+                return data;
+            }
+
+            function setText(id, value) {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = String(value);
+                }
+            }
+
+            function renderMessages(messages) {
+                const messagesState = document.getElementById('messages-state');
+                const messagesList = document.getElementById('messages-list');
+
+                if (!messages.length) {
+                    messagesState.textContent = 'Your inbox is empty right now.';
+                    messagesList.hidden = true;
+                    messagesList.innerHTML = '';
+                    return;
+                }
+
+                messagesState.textContent = '';
+                messagesList.hidden = false;
+                messagesList.innerHTML = messages.map((message) => `
+                    <article class="panel">
+                        <strong>${message.subject}</strong>
+                        <p>${message.preview}</p>
+                    </article>
+                `).join('');
+            }
+
+            async function loadDashboard() {
+                try {
+                    const [stats, messagePayload] = await Promise.all([
+                        getJson('/api/stats'),
+                        getJson('/api/messages?folder=inbox&channel=gmail&sort=newest&limit=25&offset=0'),
+                    ]);
+
+                    setText('stat-total', stats.total_messages ?? 0);
+                    setText('stat-unread', stats.unread_count ?? 0);
+                    setText('stat-sent', stats.sent_today ?? 0);
+                    setText('stat-ai', stats.ai_replies ?? 0);
+                    renderMessages(messagePayload.messages || []);
+                } catch (error) {
+                    const messagesState = document.getElementById('messages-state');
+                    messagesState.textContent = error.message;
+                }
+            }
+
+            const aiSearchForm = document.getElementById('ai-search-form');
+            const aiResults = document.getElementById('ai-results');
+            aiSearchForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const query = (new FormData(aiSearchForm).get('query') || '').toString().trim();
+                if (!query) {
+                    aiResults.textContent = 'Enter a search query first.';
+                    return;
+                }
+
+                try {
+                    const payload = await getJson('/api/ai/search', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({ query }),
+                    });
+
+                    aiResults.innerHTML = (payload.results || []).map((result) => `
+                        <article class="panel">
+                            <strong>${result.title}</strong>
+                            <p>${result.snippet}</p>
+                        </article>
+                    `).join('');
+                } catch (error) {
+                    aiResults.textContent = error.message;
+                }
+            });
+
+            void loadDashboard();
+        })();
+    </script>
 {% endblock %}
