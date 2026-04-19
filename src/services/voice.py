@@ -1,6 +1,7 @@
 """Voice transcription service stubs for Sprint 1."""
 
 from __future__ import annotations
+
 from typing import Any
 
 
@@ -13,16 +14,20 @@ def transcribe_audio(file_path: str, language: str | None = None) -> dict[str, A
     try:
         import whisper
 
-        model = whisper.load_model('tiny')
-        transcription = model.transcribe(file_path, language=language) if language else model.transcribe(file_path)
+        model = whisper.load_model("tiny")
+        transcription = (
+            model.transcribe(file_path, language=language)
+            if language
+            else model.transcribe(file_path)
+        )
         return {
-            'text': transcription.get('text', ''),
-            'language': transcription.get('language', language or 'en'),
-            'segments': transcription.get('segments', []),
+            "text": transcription.get("text", ""),
+            "language": transcription.get("language", language or "en"),
+            "segments": transcription.get("segments", []),
         }
     except ImportError:
         return {
-            'text': 'Transcription placeholder: whisper package not installed.',
-            'language': language or 'en',
-            'segments': [],
+            "text": "Transcription placeholder: whisper package not installed.",
+            "language": language or "en",
+            "segments": [],
         }

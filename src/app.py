@@ -1,10 +1,14 @@
 import os
-from flask import Flask, redirect, url_for, session
-from src.db import db, init_db
-from src import models  # noqa: F401 - import models so they're registered with SQLAlchemy
+
+from dotenv import load_dotenv
+from flask import Flask, redirect, session, url_for
+
+from src.db import init_db
 from src.web.auth_routes import auth_bp
 from src.web.email_routes import email_bp
 from src.web.nlp_routes import nlp_bp
+
+load_dotenv()
 
 
 def create_app(test_config=None):
@@ -12,20 +16,20 @@ def create_app(test_config=None):
     root_dir = os.path.dirname(os.path.dirname(__file__))
     app = Flask(
         __name__,
-        static_folder=os.path.join(root_dir, 'static'),
-        static_url_path='/static',
-        template_folder=os.path.join(root_dir, 'templates'),
+        static_folder=os.path.join(root_dir, "static"),
+        static_url_path="/static",
+        template_folder=os.path.join(root_dir, "templates"),
     )
 
-    app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key')
-    database_url = os.getenv('DATABASE_URL')
+    app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "dev-secret-key")
+    database_url = os.getenv("DATABASE_URL")
     if database_url:
-        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+        app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     else:
-        db_path = os.path.join(root_dir, 'data.db')
-        app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+        db_path = os.path.join(root_dir, "data.db")
+        app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
 
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     if test_config is not None:
         app.config.update(test_config)
@@ -35,16 +39,17 @@ def create_app(test_config=None):
     app.register_blueprint(email_bp)
     app.register_blueprint(nlp_bp)
 
-    @app.route('/')
+    @app.route("/")
     def index():
-        if session.get('user_id'):
-            return redirect(url_for('auth.dashboard'))
-        return redirect(url_for('auth.login'))
+        if session.get("user_id"):
+            return redirect(url_for("auth.dashboard"))
+        return redirect(url_for("auth.login_form"))
 
-    @app.route('/health')
+    @app.route("/health")
     def health():
         return {"status": "ok"}
 
     return app
+
 
 app = create_app()

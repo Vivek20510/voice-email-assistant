@@ -1,4 +1,5 @@
 import pytest
+
 from src.app import create_app
 from src.db import db
 
@@ -6,10 +7,10 @@ from src.db import db
 @pytest.fixture
 def app():
     test_config = {
-        'TESTING': True,
-        'SECRET_KEY': 'test-secret',
-        'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
-        'SQLALCHEMY_TRACK_MODIFICATIONS': False,
+        "TESTING": True,
+        "SECRET_KEY": "test-secret",
+        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+        "SQLALCHEMY_TRACK_MODIFICATIONS": False,
     }
     app = create_app(test_config=test_config)
 

@@ -16,7 +16,7 @@
 
         <!-- Show only after login -->
         <nav class="site-nav">
-            {% if session['user_id'] %}
+            {% if session.get('user_id') %}
                 <a href="/auth/dashboard">Dashboard</a>
                 <a href="/auth/compose">Compose</a>
                 <a href="/auth/settings">Settings</a>
