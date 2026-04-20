@@ -1,8 +1,10 @@
+
 from flask import Blueprint, jsonify, request
 
 from src.services.nlp_service import suggest_replies, summarize_text
 
 nlp_bp = Blueprint("nlp", __name__, url_prefix="/nlp")
+
 
 
 def _json_error(message: str, code: int):
@@ -31,3 +33,4 @@ def suggest():
 
     replies = suggest_replies(text)
     return jsonify({"suggestions": replies})
+

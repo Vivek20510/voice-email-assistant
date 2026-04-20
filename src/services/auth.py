@@ -36,6 +36,7 @@ def verify_password(password: str, password_hash: str) -> bool:
     return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
 
 
+
 def get_auth_url() -> tuple[str, str]:
     """Build the Google OAuth authorization URL and state token."""
     client_id = _client_id()
@@ -111,3 +112,4 @@ def handle_callback(request_url: str, expected_state: str | None) -> dict:
         raise ValueError("Google account did not return an email address.")
 
     return user_info
+

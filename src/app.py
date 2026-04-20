@@ -1,12 +1,14 @@
 import os
 
+
 from dotenv import load_dotenv
 from flask import Flask, redirect, session, url_for
 
 from src.db import init_db
+
 from src.web.auth_routes import auth_bp
-from src.web.email_routes import email_bp
-from src.web.nlp_routes import nlp_bp
+from src.web.email_routes import email_bp, api_email_bp
+from src.web.nlp_routes import nlp_bp, api_nlp_bp
 
 load_dotenv()
 
@@ -37,13 +39,17 @@ def create_app(test_config=None):
     init_db(app)
     app.register_blueprint(auth_bp)
     app.register_blueprint(email_bp)
+    app.register_blueprint(api_email_bp)
     app.register_blueprint(nlp_bp)
+    app.register_blueprint(api_nlp_bp)
 
     @app.route("/")
     def index():
         if session.get("user_id"):
             return redirect(url_for("auth.dashboard"))
+
         return redirect(url_for("auth.login_form"))
+
 
     @app.route("/health")
     def health():

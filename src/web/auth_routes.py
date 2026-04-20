@@ -1,5 +1,6 @@
 from flask import (
     Blueprint,
+
     jsonify,
     redirect,
     render_template,
@@ -7,6 +8,7 @@ from flask import (
     session,
     url_for,
 )
+
 
 from src.db import db
 from src.models import User
@@ -30,13 +32,20 @@ def _json_error(message: str, code: int):
     return jsonify({"error": message, "code": code}), code
 
 
+
 @auth_bp.route("/login", methods=["GET"])
 def login_form():
     return render_template("login.html")
 
 
+    local_part = email.split("@", 1)[0]
+    cleaned = "".join(ch for ch in local_part if ch.isalnum())
+    return (cleaned[:2] or "VE").upper()
+
+
 @auth_bp.route("/login", methods=["POST"])
 def login():
+ dev
     data = _request_data()
     email = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
@@ -44,6 +53,7 @@ def login():
     if not email or not password:
         if request.is_json:
             return _json_error("Email and password are required.", 400)
+
 
         return render_template("login.html", error="Please enter email and password.")
 
@@ -106,6 +116,12 @@ def signup_form():
     return render_template("signup.html")
 
 
+    # Empty fields
+    if not email or not password:
+        if request.is_json:
+            return _json_error("Email and password are required.", 400)
+
+
 @auth_bp.route("/signup", methods=["POST"])
 def signup():
     data = _request_data()
@@ -144,10 +160,12 @@ def signup():
     return redirect(url_for("auth.dashboard"))
 
 
+
 @auth_bp.route("/logout", methods=["GET"])
 def logout():
     session.pop("user_id", None)
     session.pop("user_email", None)
+
     session.pop("user_name", None)
     session.pop("oauth_state", None)
 
@@ -155,6 +173,7 @@ def logout():
         return jsonify({"message": "Logged out."}), 200
 
     return redirect(url_for("auth.login_form"))
+
 
 
 @auth_bp.route("/status", methods=["GET"])
@@ -172,15 +191,19 @@ def status():
 
 @auth_bp.route("/dashboard", methods=["GET"])
 def dashboard():
+
     if not session.get("user_id"):
         return redirect(url_for("auth.login_form"))
     return render_template("dashboard.html", email=session.get("user_email"))
 
 
+
 @auth_bp.route("/settings", methods=["GET"])
 def settings():
     if not session.get("user_id"):
+
         return redirect(url_for("auth.login_form"))
+
 
     return render_template("settings.html", email=session.get("user_email"))
 
@@ -188,6 +211,8 @@ def settings():
 @auth_bp.route("/compose", methods=["GET"])
 def compose():
     if not session.get("user_id"):
+
         return redirect(url_for("auth.login_form"))
+
 
     return render_template("compose.html", email=session.get("user_email"))

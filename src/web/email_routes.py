@@ -1,6 +1,8 @@
+
 from flask import Blueprint, jsonify, session
 
 email_bp = Blueprint("email", __name__, url_prefix="/email")
+
 
 
 def _json_error(message: str, code: int):
@@ -11,6 +13,8 @@ def _require_login():
     if not session.get("user_id"):
         return _json_error("Unauthorized.", 401)
     return None
+
+
 
 
 @email_bp.route("/send", methods=["POST"])
@@ -39,3 +43,4 @@ def read_email(message_id):
         return auth_error
 
     return jsonify({"error": "not implemented", "code": 501}), 501
+

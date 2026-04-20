@@ -59,12 +59,15 @@ def test_logout_clears_session(client):
         "/auth/signup", json={"email": "vivek@example.com", "password": "P@ssw0rd"}
     )
     logout_response = client.get("/auth/logout")
+
     assert logout_response.status_code == 302
     assert "/auth/login" in logout_response.headers["Location"]
+
 
     status_response = client.get("/auth/status")
     assert status_response.status_code == 401
     assert status_response.json["error"] == "Unauthorized."
+
 
 
 def test_google_login_redirects_and_stores_state(client, monkeypatch):
@@ -140,3 +143,4 @@ def test_oauth_login_can_access_protected_routes(client, monkeypatch):
 
     assert response.status_code == 200
     assert response.json == {"emails": []}
+
