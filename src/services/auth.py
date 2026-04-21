@@ -1,6 +1,7 @@
 import os
 import secrets
 import urllib.parse
+from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import requests
@@ -11,7 +12,16 @@ load_dotenv()
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
-SCOPES = "openid email profile"
+LOGIN_SCOPES = "openid email profile"
+GMAIL_SCOPES = " ".join(
+    [
+        "openid",
+        "email",
+        "profile",
+        "https://www.googleapis.com/auth/gmail.readonly",
+        "https://www.googleapis.com/auth/gmail.send",
+    ]
+)
 
 
 def _client_id() -> str | None:
@@ -22,8 +32,21 @@ def _client_secret() -> str | None:
     return os.getenv("GOOGLE_CLIENT_SECRET")
 
 
-def _redirect_uri() -> str:
-    return os.getenv("GOOGLE_OAUTH_REDIRECT_URI", "http://localhost:5000/auth/callback")
+def _login_redirect_uri() -> str:
+    return os.getenv(
+        "GOOGLE_LOGIN_REDIRECT_URI",
+        os.getenv(
+            "GOOGLE_OAUTH_REDIRECT_URI",
+            os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:5000/auth/callback"),
+        ),
+    )
+
+
+def _gmail_redirect_uri() -> str:
+    return os.getenv(
+        "GOOGLE_GMAIL_REDIRECT_URI",
+        os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:5000/auth/gmail/callback"),
+    )
 
 
 def hash_password(password: str) -> str:
@@ -38,6 +61,16 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 def get_auth_url() -> tuple[str, str]:
     """Build the Google OAuth authorization URL and state token."""
+    return build_auth_url(scopes=LOGIN_SCOPES, redirect_uri=_login_redirect_uri())
+
+
+def get_gmail_auth_url() -> tuple[str, str]:
+    """Build the Gmail authorization URL and state token."""
+    return build_auth_url(scopes=GMAIL_SCOPES, redirect_uri=_gmail_redirect_uri())
+
+
+def build_auth_url(*, scopes: str, redirect_uri: str) -> tuple[str, str]:
+    """Build a Google OAuth authorization URL for the supplied scope set."""
     client_id = _client_id()
     if not client_id:
         raise ValueError("Missing GOOGLE_CLIENT_ID configuration.")
@@ -45,9 +78,9 @@ def get_auth_url() -> tuple[str, str]:
     state = secrets.token_urlsafe(32)
     params = {
         "client_id": client_id,
-        "redirect_uri": _redirect_uri(),
+        "redirect_uri": redirect_uri,
         "response_type": "code",
-        "scope": SCOPES,
+        "scope": scopes,
         "access_type": "offline",
         "prompt": "consent",
         "state": state,
@@ -58,6 +91,26 @@ def get_auth_url() -> tuple[str, str]:
 
 def handle_callback(request_url: str, expected_state: str | None) -> dict:
     """Validate the callback and return Google user info."""
+    return handle_oauth_callback(
+        request_url,
+        expected_state,
+        redirect_uri=_login_redirect_uri(),
+    )["user_info"]
+
+
+def handle_gmail_callback(request_url: str, expected_state: str | None) -> dict:
+    """Validate the Gmail callback and return token data plus user info."""
+    return handle_oauth_callback(
+        request_url,
+        expected_state,
+        redirect_uri=_gmail_redirect_uri(),
+    )
+
+
+def handle_oauth_callback(
+    request_url: str, expected_state: str | None, *, redirect_uri: str
+) -> dict:
+    """Validate the callback and return token data plus Google user info."""
     if not expected_state:
         raise ValueError("Missing OAuth state in session.")
 
@@ -87,7 +140,7 @@ def handle_callback(request_url: str, expected_state: str | None) -> dict:
             "code": code,
             "client_id": client_id,
             "client_secret": client_secret,
-            "redirect_uri": _redirect_uri(),
+            "redirect_uri": redirect_uri,
             "grant_type": "authorization_code",
         },
         timeout=15,
@@ -110,4 +163,18 @@ def handle_callback(request_url: str, expected_state: str | None) -> dict:
     if not user_info.get("email"):
         raise ValueError("Google account did not return an email address.")
 
-    return user_info
+    return {
+        "access_token": access_token,
+        "refresh_token": token_data.get("refresh_token"),
+        "expires_in": token_data.get("expires_in"),
+        "token_type": token_data.get("token_type"),
+        "scope": token_data.get("scope"),
+        "user_info": user_info,
+    }
+
+
+def compute_expiry(expires_in: int | None) -> datetime | None:
+    """Convert OAuth expires_in seconds into an absolute UTC datetime."""
+    if expires_in is None:
+        return None
+    return datetime.now(timezone.utc) + timedelta(seconds=int(expires_in))
