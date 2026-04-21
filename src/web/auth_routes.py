@@ -260,7 +260,20 @@ def status():
 def dashboard():
     if not session.get("user_id"):
         return redirect(url_for("auth.login_form"))
-    return render_template("dashboard.html", email=session.get("user_email"))
+
+    email = session.get("user_email")
+
+    user = {
+        "name": email.split("@")[0].title(),
+        "email": email,
+        "profile_photo": None
+    }
+
+    return render_template(
+        "dashboard.html",
+        user=user,
+        email=email
+    )
 
 
 @auth_bp.route("/settings", methods=["GET"])
@@ -268,7 +281,13 @@ def settings():
     if not session.get("user_id"):
         return redirect(url_for("auth.login_form"))
 
-    return render_template("settings.html", **_settings_context())
+    user = _current_user()
+
+    return render_template(
+        "settings.html",
+        user=user,
+        **_settings_context()
+    )
 
 
 @auth_bp.route("/compose", methods=["GET"])
@@ -295,3 +314,4 @@ def disconnect_gmail():
 
     session["gmail_success"] = "Gmail disconnected."
     return redirect(url_for("auth.settings"))
+

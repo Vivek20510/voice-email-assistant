@@ -1,25 +1,749 @@
-{% extends 'base.html' %}
-
-{% block content %}
-    <section class="dashboard-shell">
-        <h1>Dashboard</h1>
-        <p>Welcome back, {{ email }}.</p>
-        <div class="dashboard-grid">
-            <div class="panel">
-                <h2>Service Status</h2>
-                <ul>
-                    <li>Gmail: <strong>🔴 Disconnected</strong></li>
-                    <li>Telegram: <strong>🔴 Disconnected</strong></li>
-                </ul>
-            </div>
-            <div class="panel">
-                <h2>Inbox</h2>
-                <p>No messages yet. Connect a service to begin.</p>
-            </div>
-            <div class="panel">
-                <h2>Voice Assistant</h2>
-                <p>Use the voice panel to compose messages in future sprints.</p>
-            </div>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body>
+    <div id="screen-app" class="screen">
+      <!-- TOP NAV -->
+      <nav class="topnav">
+        <div class="nav-brand">
+          <div class="nav-brand-mark">✉</div>
+          <span class="nav-brand-name">Voice Mail</span>
         </div>
-    </section>
-{% endblock %}
+
+        <div class="nav-search">
+          <span class="search-ico">⌕</span>
+          <input
+            type="text"
+            placeholder="Search messages, people, channels…"
+            oninput="handleNavSearch(this.value)"
+          />
+        </div>
+
+        <div class="nav-right">
+          <div class="nav-divider"></div>
+          <button
+            class="nav-btn notif-badge"
+            onclick="showToast('No new notifications')"
+          >
+            🔔
+          </button>
+          <button
+            class="nav-btn"
+            id="nav-settings"
+            onclick="switchPage('settings')"
+          >
+            ⚙ Settings
+          </button>
+          <div class="nav-avatar" title="Profile — {{ user.name }}">
+            <img
+              src="{{ user.profile_photo or url_for('static', filename='img/default-avatar.png') }}"
+              alt="Profile"
+              class="avatar-img"
+            />
+          </div>
+        </div>
+      </nav>
+
+      <div class="app-body">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+          <button class="sidebar-compose" onclick="switchPage('compose')">
+            ✦ Compose
+          </button>
+
+          <div class="sidebar-label">Mail</div>
+          <div
+            class="sidebar-item active"
+            id="sb-inbox"
+            onclick="switchPage('dashboard')"
+          >
+            <span>Inbox</span><span class="sidebar-badge">12</span>
+          </div>
+          <div
+            class="sidebar-item"
+            id="sb-draft"
+            onclick="switchSidebar('sb-draft')"
+          >
+            Draft
+            <span class="sidebar-badge" style="background: var(--ink-300)"
+              >3</span
+            >
+          </div>
+          <div
+            class="sidebar-item"
+            id="sb-sent"
+            onclick="switchSidebar('sb-sent')"
+          >
+            Sent
+          </div>
+          <div
+            class="sidebar-item"
+            id="sb-archive"
+            onclick="switchSidebar('sb-archive')"
+          >
+            Archive
+          </div>
+          <div
+            class="sidebar-item"
+            id="sb-trash"
+            onclick="switchSidebar('sb-trash')"
+          >
+            Trash
+          </div>
+
+          <div class="sidebar-divider"></div>
+          <div class="sidebar-label">Channels</div>
+          <div
+            class="sidebar-item"
+            id="sb-emails"
+            onclick="switchSidebar('sb-emails')"
+          >
+            📧 Email
+          </div>
+          <div
+            class="sidebar-item"
+            id="sb-whatsapp"
+            onclick="switchSidebar('sb-whatsapp')"
+          >
+            💬 WhatsApp
+          </div>
+          <div
+            class="sidebar-item"
+            id="sb-telegram"
+            onclick="switchSidebar('sb-telegram')"
+          >
+            ✈ Telegram
+          </div>
+          <div
+            class="sidebar-item"
+            id="sb-outlook"
+            onclick="switchSidebar('sb-outlook')"
+          >
+            📮 Outlook
+          </div>
+
+          <div class="sidebar-divider"></div>
+          <div class="sidebar-label">Labels</div>
+          <div
+            class="sidebar-item"
+            id="sb-work"
+            onclick="switchSidebar('sb-work')"
+          >
+            Work
+          </div>
+          <div
+            class="sidebar-item"
+            id="sb-personal"
+            onclick="switchSidebar('sb-personal')"
+          >
+            Personal
+          </div>
+          <div
+            class="sidebar-item"
+            id="sb-promos"
+            onclick="switchSidebar('sb-promos')"
+          >
+            Promotions
+          </div>
+
+          <div class="va-status-box">
+            <div class="va-status-top">
+              <span class="va-dot"></span> Voice Assistant
+            </div>
+            <div class="va-sub">Online · Ready to help</div>
+          </div>
+        </aside>
+
+        <!-- PAGE: DASHBOARD -->
+        <div id="page-dashboard" class="page-content active">
+          <div class="inbox-toolbar">
+            <h1>Inbox</h1>
+            <div class="inbox-toolbar-actions">
+              <button
+                class="tool-btn"
+                onclick="showToast('All messages marked as read')"
+              >
+                ✓ Mark all read
+              </button>
+              <button class="tool-btn" onclick="showToast('Sort options')">
+                ↕ Sort
+              </button>
+              <button class="tool-btn" onclick="showToast('Filter options')">
+                ⊟ Filter
+              </button>
+            </div>
+          </div>
+
+          <div class="dashboard-body">
+            <!-- LEFT: Inbox / Message List -->
+            <div class="dashboard-main">
+              <!-- put your inbox list / threads / messages here -->
+              <!-- (existing inbox items go here) -->
+            </div>
+
+            <!-- RIGHT: AI SUMMARY PANEL -->
+            <div class="dashboard-side">
+              <div class="ai-search-panel" id="ai-search-panel">
+                <div class="ai-panel-header">
+                  <div>
+                    <div class="ai-panel-title">✦ AI Summary</div>
+                    <div class="ai-panel-sub">
+                      Quick insights from your inbox
+                    </div>
+                  </div>
+                </div>
+
+                <div class="ai-search-box">
+                  <input
+                    type="text"
+                    class="ai-search-input"
+                    id="ai-input"
+                    placeholder="Ask AI to summarise, find, or filter…"
+                    onkeydown="handleAiKey(event)"
+                  />
+                  <button
+                    class="ai-send-btn"
+                    onclick="sendAiQuery()"
+                    title="Send"
+                  >
+                    ↑
+                  </button>
+                </div>
+
+                <div class="ai-chips">
+                  <div
+                    class="ai-chip"
+                    onclick="prefillAi('Summarise unread emails')"
+                  >
+                    Having Attachments
+                  </div>
+                  <div
+                    class="ai-chip"
+                    onclick="prefillAi('Important emails today')"
+                  >
+                    Important today
+                  </div>
+                  <div class="ai-chip" onclick="prefillAi('Action items')">
+                    From Vivek
+                  </div>
+                </div>
+
+                <div class="ai-results-area" id="ai-results">
+                  <div class="ai-empty" id="ai-empty">
+                    <div class="ai-empty-icon">✦</div>
+                    <div class="ai-empty-text">
+                      Get instant summaries,<br />
+                      action items, and insights<br />
+                      from your inbox.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAGE: VOICEMAIL VIEW -->
+        <div id="page-voicemail" class="page-content">
+          <div class="inbox-toolbar">
+            <button class="back-btn" onclick="switchPage('dashboard')">
+              ← Back
+            </button>
+            <h1>Message</h1>
+          </div>
+
+          <div class="msgview-wrap">
+            <div class="summary-card">
+              <div>
+                <div class="summary-badge">AI Summary</div>
+                <h3>Alice Rodriguez</h3>
+                <div class="summary-text">
+                  Alice is requesting feedback on the Q3 report by end of
+                  Friday. Action required: review the attached document and
+                  reply with comments before the deadline.
+                </div>
+              </div>
+              <button
+                class="read-aloud-btn"
+                onclick="showToast('▶ Reading aloud…')"
+              >
+                ▶ Read aloud
+              </button>
+            </div>
+
+            <div class="message-card">
+              <div class="sender-row">
+                <div class="sender-av">AR</div>
+                <div class="sender-info">
+                  <div class="sender-name">
+                    Alice Rodriguez
+                    <span class="msg-tag tag-email">Email</span>
+                  </div>
+                  <div class="sender-email">
+                    alice@company.com → priya@company.com
+                  </div>
+                </div>
+                <div class="msg-timestamp">Today, 10:42 AM</div>
+              </div>
+
+              <div class="msg-subject-bar">
+                Q3 Report Review — Feedback Needed
+              </div>
+
+              <div class="msg-body-content">
+                <p>Hi Priya,</p>
+                <p>
+                  Please find attached the Q3 summary report. I've highlighted
+                  the key metrics and areas where I need your input before we
+                  present to the board next Monday.
+                </p>
+                <p>
+                  Specifically, I'd appreciate your review of the revenue
+                  forecast assumptions in Section 3 and the risk matrix in
+                  Section 5. Your expertise in those areas would be invaluable.
+                </p>
+                <p>
+                  Could you please send me your feedback by EOD this Friday?
+                  This gives us the weekend to incorporate comments before the
+                  final presentation.
+                </p>
+                <p>Best regards,<br />Alice</p>
+              </div>
+
+              <div class="msg-actions-row">
+                <button
+                  class="action-btn primary"
+                  onclick="switchPage('compose')"
+                >
+                  ↩ Reply
+                </button>
+                <button class="action-btn" onclick="switchPage('compose')">
+                  ↪ Forward
+                </button>
+                <button class="action-btn" onclick="showToast('Archived')">
+                  Archive
+                </button>
+                <button
+                  class="action-btn"
+                  onclick="showToast('Moved to trash')"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+
+            <div class="suggestions-card">
+              <div class="suggestions-header">
+                <div class="suggestions-title">AI-Suggested Replies</div>
+                <div class="ai-badge">AI</div>
+              </div>
+
+              <div class="suggestion-item">
+                <span
+                  >Thanks Alice! I'll review Sections 3 and 5 and send you my
+                  feedback by Friday EOD. Looking forward to the board
+                  presentation.</span
+                >
+                <button class="use-btn" onclick="switchPage('compose')">
+                  Use
+                </button>
+              </div>
+
+              <div class="suggestion-item">
+                <span
+                  >Hi Alice, got it! I have a few initial thoughts — let's
+                  schedule a 15-min call tomorrow to align before I put
+                  everything in writing?</span
+                >
+                <button class="use-btn" onclick="switchPage('compose')">
+                  Use
+                </button>
+              </div>
+
+              <div class="suggestion-item">
+                <span
+                  >Received, Alice. I'm slightly tied up until Thursday — would
+                  Thursday evening work as the deadline instead of Friday?</span
+                >
+                <button class="use-btn" onclick="switchPage('compose')">
+                  Use
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAGE: SETTINGS -->
+        <div id="page-settings" class="page-content">
+          <div class="settings-layout">
+            <div class="settings-nav">
+              <div class="settings-nav-header">Settings</div>
+
+              <div
+                class="settings-nav-item active"
+                onclick="switchSettingsTab(this, 'spanel-profile')"
+              >
+                👤 Profile
+              </div>
+
+              <div
+                class="settings-nav-item"
+                onclick="switchSettingsTab(this, 'spanel-voice')"
+              >
+                🎙 Voice Assistant
+              </div>
+
+              <div
+                class="settings-nav-item"
+                onclick="switchSettingsTab(this, 'spanel-notifications')"
+              >
+                🔔 Notifications
+              </div>
+
+              <div
+                class="settings-nav-item"
+                onclick="switchSettingsTab(this, 'spanel-channels')"
+              >
+                ⚡ Channels
+              </div>
+
+              <div
+                class="settings-nav-item"
+                onclick="switchSettingsTab(this, 'spanel-security')"
+              >
+                🔒 Privacy &amp; Security
+              </div>
+
+              <div
+                class="settings-nav-item"
+                onclick="switchSettingsTab(this, 'spanel-appearance')"
+              >
+                🎨 Appearance
+              </div>
+
+              <div class="settings-nav-spacer"></div>
+
+              <div class="settings-nav-footer">
+                <button class="btn-logout" onclick="confirmLogout()">
+                  → Sign Out
+                </button>
+              </div>
+            </div>
+
+            <div class="settings-content">
+              <!-- PROFILE TAB -->
+              <div id="spanel-profile" class="settings-section active">
+                <div class="profile-content">
+                  <div class="settings-section-title">Profile Settings</div>
+                  <div class="settings-section-desc">
+                    Manage your personal information and account details.
+                  </div>
+
+                  <div class="settings-card">
+                    <div class="profile-header">
+                      <div class="profile-left">
+                        <img
+                          id="profilePhoto"
+                          class="profile-avatar-lg"
+                          src="{{ user.profile_photo or url_for('static', filename='img/default-avatar.png') }}"
+                          alt="Profile Photo"
+                        />
+
+                        <div class="profile-info">
+                          <div class="profile-name">{{ user.name }}</div>
+                          <div class="profile-email">{{ user.email }}</div>
+                        </div>
+                      </div>
+
+                      <div class="profile-actions">
+                        <button
+                          class="btn-change-photo"
+                          onclick="openPhotoPicker()"
+                        >
+                          Change Photo
+                        </button>
+                      </div>
+
+                      <input
+                        type="file"
+                        id="photoInput"
+                        accept="image/*"
+                        hidden
+                        onchange="loadPhoto(event)"
+                      />
+                    </div>
+
+                    <div class="settings-row">
+                      <div class="settings-row-left">
+                        <div class="settings-row-label">Display Name</div>
+                        <div class="settings-row-desc">
+                          How your name appears to others
+                        </div>
+                      </div>
+                      <input
+                        type="text"
+                        class="settings-input-sm"
+                        value="Priya Sharma"
+                      />
+                    </div>
+
+                    <div class="settings-row">
+                      <div class="settings-row-left">
+                        <div class="settings-row-label">Email Address</div>
+                        <div class="settings-row-desc">
+                          This email is used for login and cannot be changed
+                        </div>
+                      </div>
+
+                      <div class="settings-value-readonly">
+                        {{ user.email }}
+                      </div>
+                    </div>
+
+                    <div class="settings-row">
+                      <div class="settings-row-left">
+                        <div class="settings-row-label">Phone Number</div>
+                        <div class="settings-row-desc">
+                          Used for WhatsApp and SMS
+                        </div>
+                      </div>
+                      <input
+                        type="text"
+                        class="settings-input-sm"
+                        value="+91 98765 43210"
+                      />
+                    </div>
+
+                    <div class="settings-row">
+                      <div class="settings-row-left">
+                        <div class="settings-row-label">Time Zone</div>
+                        <div class="settings-row-desc">
+                          For scheduling and timestamps
+                        </div>
+                      </div>
+                      <select class="settings-select-sm">
+                        <option>IST (UTC+5:30)</option>
+                        <option>UTC</option>
+                        <option>PST</option>
+                        <option>EST</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="settings-save-row">
+                    <button class="btn-save">Save Changes</button>
+                    <button class="btn-cancel">Cancel</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- OTHER TABS (REQUIRED) -->
+              <div id="spanel-voice" class="settings-section">
+                Voice settings
+              </div>
+              <div id="spanel-notifications" class="settings-section">
+                Notification settings
+              </div>
+              <!-- Channels Section -->
+              <div id="spanel-channels" class="settings-section hidden">
+                <div class="settings-section-title">Connected Channels</div>
+                <div class="settings-section-desc">
+                  Manage your messaging integrations.
+                </div>
+
+                <div class="settings-card">
+                  <!-- Gmail -->
+                  <div class="settings-row">
+                    <div class="settings-row-left">
+                      <div class="settings-row-label">📧 Gmail</div>
+
+                      {% if gmail_connected %}
+                      <div class="settings-row-desc">
+                        {{ gmail_email if gmail_email else 'Connected' }}
+                      </div>
+                      {% else %}
+                      <div class="settings-row-desc">Not connected</div>
+                      {% endif %}
+                    </div>
+
+                    {% if gmail_connected %}
+                    <form
+                      method="post"
+                      action="{{ url_for('channels.disconnect_gmail') }}"
+                      style="margin: 0"
+                    >
+                      <button
+                        type="submit"
+                        class="btn-cancel"
+                        style="font-size: 12px"
+                      >
+                        Disconnect
+                      </button>
+                    </form>
+                    {% else %}
+                    <a
+                      href="{{ url_for('auth.gmail_connect', next='settings') }}"
+                      class="btn-save"
+                      style="
+                        padding: 6px 14px;
+                        font-size: 12px;
+                        text-decoration: none;
+                      "
+                    >
+                      Connect
+                    </a>
+                    {% endif %}
+                  </div>
+
+                  <!-- WhatsApp -->
+                  <div class="settings-row">
+                    <div class="settings-row-left">
+                      <div class="settings-row-label">💬 WhatsApp</div>
+                      <div class="settings-row-desc">Not connected</div>
+                    </div>
+
+                    <button
+                      class="btn-save"
+                      style="padding: 6px 14px; font-size: 12px"
+                      onclick="showToast('Connecting WhatsApp...')"
+                    >
+                      Connect
+                    </button>
+                  </div>
+
+                  <!-- Telegram -->
+                  <div class="settings-row">
+                    <div class="settings-row-left">
+                      <div class="settings-row-label">✈ Telegram</div>
+                      <div class="settings-row-desc">Not connected</div>
+                    </div>
+
+                    <button
+                      class="btn-save"
+                      style="padding: 6px 14px; font-size: 12px"
+                      onclick="showToast('Connecting Telegram...')"
+                    >
+                      Connect
+                    </button>
+                  </div>
+
+                  <!-- Outlook -->
+                  <div class="settings-row">
+                    <div class="settings-row-left">
+                      <div class="settings-row-label">📮 Outlook</div>
+                      <div class="settings-row-desc">Not connected</div>
+                    </div>
+
+                    <button
+                      class="btn-save"
+                      style="padding: 6px 14px; font-size: 12px"
+                      onclick="showToast('Connecting Outlook...')"
+                    >
+                      Connect
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div id="spanel-security" class="settings-section">
+                Security settings
+              </div>
+              <div id="spanel-appearance" class="settings-section">
+                Appearance settings
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: COMPOSE -->
+    <div id="page-compose" class="page-content">
+      <div class="compose-wrap">
+        <div class="compose-title-bar">
+          <button class="tool-btn" onclick="switchPage('dashboard')">
+            ← Back
+          </button>
+          <h2>New Message</h2>
+        </div>
+
+        <div class="compose-card">
+          <input
+            type="text"
+            class="ai-search-input"
+            placeholder="To"
+            style="margin-bottom: 15px"
+          />
+          <input
+            type="text"
+            class="ai-search-input"
+            placeholder="Subject"
+            style="margin-bottom: 15px"
+          />
+          <textarea
+            class="ai-search-input"
+            rows="8"
+            placeholder="Write your message..."
+            style="margin-bottom: 15px"
+          ></textarea>
+          <button class="sidebar-compose">Send ↑</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function switchPage(page) {
+        document.querySelectorAll(".page-content").forEach((item) => {
+          item.classList.remove("active");
+        });
+
+        document.getElementById("page-" + page).classList.add("active");
+      }
+
+      function confirmLogout() {
+        const ok = confirm("Are you sure you want to sign out?");
+        if (ok) {
+          window.location.href = "/auth/logout";
+        }
+      }
+
+      function switchSettingsTab(el, panelId) {
+        // 1. Update left nav active state
+        document.querySelectorAll(".settings-nav-item").forEach((item) => {
+          item.classList.remove("active");
+        });
+        el.classList.add("active");
+
+        // 2. Hide all settings panels
+        document.querySelectorAll(".settings-section").forEach((panel) => {
+          panel.classList.remove("active");
+        });
+
+        // 3. Show the selected panel only
+        document.getElementById(panelId).classList.add("active");
+      }
+
+      function openPhotoPicker() {
+        document.getElementById("photoInput").click();
+      }
+
+      function loadPhoto(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          document.getElementById("profilePhoto").src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    </script>
+  </body>
+</html>
