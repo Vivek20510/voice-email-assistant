@@ -3,11 +3,30 @@
 {% block content %}
     <section class="settings-panel">
         <h1>Settings</h1>
+        {% if gmail_error %}
+            <div class="panel" role="alert">
+                <strong>Gmail connection failed.</strong>
+                <p>{{ gmail_error }}</p>
+            </div>
+        {% endif %}
+        {% if gmail_success %}
+            <div class="panel" role="status">
+                <p>{{ gmail_success }}</p>
+            </div>
+        {% endif %}
         <div class="settings-grid">
             <div class="panel">
                 <h2>Gmail</h2>
                 <p>Connect your Gmail account to sync messages and send email.</p>
-                <button type="button">Connect Gmail</button>
+                {% if gmail_connected %}
+                    <p><strong>Status:</strong> Connected{% if gmail_email %} as {{ gmail_email }}{% endif %}.</p>
+                    <form method="post" action="{{ url_for('channels.disconnect_gmail') }}">
+                        <button type="submit">Disconnect Gmail</button>
+                    </form>
+                {% else %}
+                    <p><strong>Status:</strong> Not connected.</p>
+                    <a href="{{ url_for('auth.gmail_connect', next='settings') }}">Connect Gmail</a>
+                {% endif %}
             </div>
             <div class="panel">
                 <h2>Telegram</h2>
