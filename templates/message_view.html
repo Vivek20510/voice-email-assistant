@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="message-view-page" data-message-id="{{ message_id }}">
+  <div class="message-view-wrap">
+    <div class="message-detail-topbar">
+      <a href="{{ back_url }}" class="back-btn message-detail-back">← Back</a>
+      <h1 class="message-detail-title">Message</h1>
+    </div>
+
+    <div class="message-detail-shell">
+      <div class="summary-card message-detail-summary-card">
+        <div>
+          <div class="summary-badge message-detail-summary-badge">✦ AI Summary</div>
+          <h3 class="message-detail-summary-sender">{{ message.sender }}</h3>
+          <div id="summary-text" class="summary-text message-detail-summary-text">
+            {% if summary %}
+              {{ summary }}
+            {% else %}
+              AI summary will appear here once the summary API is wired.
+            {% endif %}
+          </div>
+        </div>
+        <button id="read-aloud-btn" type="button" class="read-aloud-btn message-detail-ghost-btn">▶ Read aloud</button>
+      </div>
+
+      <div class="message-card message-detail-card" data-message-id="{{ message.id }}">
+        <div class="sender-row message-detail-sender-row">
+          <div class="sender-av message-detail-avatar">{{ message.avatar_initials }}</div>
+          <div class="sender-info message-detail-sender-info">
+            <div class="sender-name message-detail-sender-name">
+              {{ message.sender }}
+              <span class="msg-tag tag-email message-detail-channel-tag">{{ message.channel }}</span>
+            </div>
+            <div class="sender-email message-detail-address">{{ message.sender_email }} → {{ message.to }}</div>
+          </div>
+          <div class="msg-timestamp message-detail-timestamp">{{ message.received_at }}</div>
+        </div>
+
+        <div class="msg-subject-bar message-detail-subject">{{ message.subject }}</div>
+
+        <div id="message-body" class="msg-body-content message-detail-body">
+          {% if message.body_text %}
+            {% for paragraph in message.body_text.split('\n\n') %}
+              <p>{{ paragraph }}</p>
+            {% endfor %}
+          {% elif message.body_html %}
+            <pre class="message-detail-pre">{{ message.body_html }}</pre>
+          {% else %}
+            <p>Message body will appear here.</p>
+          {% endif %}
+        </div>
+
+        <div class="msg-actions-row message-detail-actions">
+          <button id="reply-btn" type="button" class="action-btn primary message-detail-primary-btn">↩ Reply</button>
+          <button id="forward-btn" type="button" class="action-btn message-detail-secondary-btn">↪ Forward</button>
+          <button id="archive-btn" type="button" class="action-btn message-detail-secondary-btn">Archive</button>
+          <button id="delete-btn" type="button" class="action-btn message-detail-secondary-btn message-detail-danger-btn">Delete</button>
+        </div>
+      </div>
+
+      <div class="suggestions-card message-detail-suggestions-card">
+        <div class="suggestions-header message-detail-suggestions-header">
+          <div class="suggestions-title message-detail-suggestions-title"><span class="message-detail-star">✦</span> AI-Suggested Replies</div>
+          <div class="ai-badge message-detail-ai-badge">AI</div>
+        </div>
+
+        <div id="suggestions-list" class="message-detail-suggestions-list">
+          {% for suggestion in suggestions %}
+            <div class="suggestion-item message-detail-suggestion-item">
+              <span class="message-detail-suggestion-text">{{ suggestion }}</span>
+              <button type="button" class="use-btn message-detail-use-btn">Use</button>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

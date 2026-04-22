@@ -7,6 +7,7 @@ from flask import (
     session,
     url_for,
 )
+from urllib.parse import urlencode
 
 from src.db import db
 from src.models import User, UserToken
@@ -58,6 +59,22 @@ def _settings_context(**extra):
     }
     context.update(extra)
     return context
+
+
+def _dashboard_url(page: str = "dashboard", tab: str | None = None):
+    params = {"page": page}
+    if tab:
+        params["tab"] = tab
+    return url_for("auth.dashboard", **params)
+
+
+def _avatar_initials(name: str | None) -> str:
+    parts = [part for part in (name or "").split() if part]
+    if not parts:
+        return "NA"
+    if len(parts) == 1:
+        return parts[0][:2].upper()
+    return f"{parts[0][0]}{parts[1][0]}".upper()
 
 
 @auth_bp.route("/login", methods=["GET"])
@@ -160,7 +177,7 @@ def gmail_callback():
         session.pop("gmail_oauth_state", None)
         session.pop("gmail_oauth_next", None)
         session["gmail_error"] = str(exc)
-        return redirect(url_for("auth.settings"))
+        return redirect(_dashboard_url(page="settings", tab="channels"))
 
     user_info = oauth_data["user_info"]
     gmail_token = _gmail_token_for_user(user.id)
@@ -183,8 +200,8 @@ def gmail_callback():
     session["gmail_success"] = "Gmail connected successfully."
 
     if next_target == "dashboard":
-        return redirect(url_for("auth.dashboard"))
-    return redirect(url_for("auth.settings"))
+        return redirect(_dashboard_url())
+    return redirect(_dashboard_url(page="settings", tab="channels"))
 
 
 @auth_bp.route("/signup", methods=["GET"])
@@ -263,16 +280,14 @@ def dashboard():
 
     email = session.get("user_email")
 
-    user = {
-        "name": email.split("@")[0].title(),
-        "email": email,
-        "profile_photo": None
-    }
+    user = {"name": email.split("@")[0].title(), "email": email, "profile_photo": None}
 
     return render_template(
         "dashboard.html",
         user=user,
-        email=email
+        initial_page=request.args.get("page", "dashboard"),
+        initial_tab=request.args.get("tab", "profile"),
+        **_settings_context(),
     )
 
 
@@ -281,13 +296,7 @@ def settings():
     if not session.get("user_id"):
         return redirect(url_for("auth.login_form"))
 
-    user = _current_user()
-
-    return render_template(
-        "settings.html",
-        user=user,
-        **_settings_context()
-    )
+    return redirect(_dashboard_url(page="settings", tab="channels"))
 
 
 @auth_bp.route("/compose", methods=["GET"])
@@ -296,6 +305,64 @@ def compose():
         return redirect(url_for("auth.login_form"))
 
     return render_template("compose.html", email=session.get("user_email"))
+
+
+@auth_bp.route("/message/<message_id>", methods=["GET"])
+def message_view(message_id):
+    if not session.get("user_id"):
+        return redirect(url_for("auth.login_form"))
+
+    back_params = {}
+    back_page = request.args.get("page") or "dashboard"
+    back_folder = request.args.get("folder")
+    back_channel = request.args.get("channel")
+
+    if back_page:
+        back_params["page"] = back_page
+    if back_folder:
+        back_params["folder"] = back_folder
+    if back_channel:
+        back_params["channel"] = back_channel
+
+    back_url = url_for("auth.dashboard")
+    if back_params:
+        back_url = f"{back_url}?{urlencode(back_params)}"
+
+    message = {
+        "id": message_id,
+        "sender": "Alice Rodriguez",
+        "sender_email": "alice@company.com",
+        "to": session.get("user_email"),
+        "subject": "Q3 Report Review - Feedback Needed",
+        "body_text": (
+            "Hi there,\n\n"
+            "Please review the attached Q3 report and share your feedback by Friday. "
+            "I especially need input on the revenue assumptions and risk matrix.\n\n"
+            "Best regards,\nAlice"
+        ),
+        "body_html": None,
+        "received_at": "Today, 10:42 AM",
+        "channel": "Email",
+        "avatar_initials": _avatar_initials("Alice Rodriguez"),
+    }
+    summary = None
+    suggestions = [
+        "Thanks Alice. I'll review the report and send you detailed feedback by Friday.",
+        "Received. I will focus on the revenue assumptions and risk matrix first.",
+        "I can review this today and share any blockers before end of day.",
+    ]
+
+    return render_template(
+        "message_view.html",
+        message_id=message_id,
+        back_page=back_page,
+        back_folder=back_folder,
+        back_channel=back_channel,
+        back_url=back_url,
+        message=message,
+        summary=summary,
+        suggestions=suggestions,
+    )
 
 
 @channel_bp.route("/gmail", methods=["POST", "DELETE"])
@@ -313,4 +380,4 @@ def disconnect_gmail():
         return jsonify({"message": "Gmail disconnected."})
 
     session["gmail_success"] = "Gmail disconnected."
-    return redirect(url_for("auth.settings"))
+    return redirect(_dashboard_url(page="settings", tab="channels"))
