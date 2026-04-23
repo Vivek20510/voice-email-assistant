@@ -5,7 +5,7 @@ from flask import Flask, redirect, session, url_for
 
 from src.db import init_db
 from src.web.auth_routes import auth_bp, channel_bp
-from src.web.email_routes import email_bp
+from src.web.email_routes import email_bp, messages_bp
 from src.web.nlp_routes import nlp_bp
 
 load_dotenv()
@@ -38,6 +38,7 @@ def create_app(test_config=None):
     app.register_blueprint(auth_bp)
     app.register_blueprint(channel_bp)
     app.register_blueprint(email_bp)
+    app.register_blueprint(messages_bp)
     app.register_blueprint(nlp_bp)
 
     @app.route("/")

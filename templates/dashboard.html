@@ -10,6 +10,11 @@
     />
   </head>
   <body>
+    <div
+      id="dashboard-state"
+      data-initial-page="{{ initial_page }}"
+      data-initial-tab="{{ initial_tab }}"
+    ></div>
     <div id="screen-app" class="screen">
       <!-- TOP NAV -->
       <nav class="topnav">
@@ -165,8 +170,8 @@
         <!-- PAGE: DASHBOARD -->
         <div id="page-dashboard" class="page-content active">
           <div class="inbox-toolbar">
-            <h1>Inbox</h1>
-            <div class="inbox-toolbar-actions">
+            <h1 id="dashboard-title">Inbox</h1>
+            <div id="dashboard-toolbar-actions" class="inbox-toolbar-actions">
               <button
                 class="tool-btn"
                 onclick="showToast('All messages marked as read')"
@@ -182,15 +187,19 @@
             </div>
           </div>
 
-          <div class="dashboard-body">
+          <div id="dashboard-body" class="dashboard-body">
             <!-- LEFT: Inbox / Message List -->
             <div class="dashboard-main">
-              <!-- put your inbox list / threads / messages here -->
-              <!-- (existing inbox items go here) -->
+              <div id="inbox-content">
+                <div class="inbox-feedback" data-state="loading">
+                  <h3>Loading inbox...</h3>
+                  <p>Fetching your latest Gmail messages.</p>
+                </div>
+              </div>
             </div>
 
             <!-- RIGHT: AI SUMMARY PANEL -->
-            <div class="dashboard-side">
+            <div id="dashboard-ai-panel" class="dashboard-side">
               <div class="ai-search-panel" id="ai-search-panel">
                 <div class="ai-panel-header">
                   <div>
@@ -553,11 +562,31 @@
                 Notification settings
               </div>
               <!-- Channels Section -->
-              <div id="spanel-channels" class="settings-section hidden">
+              <div id="spanel-channels" class="settings-section">
                 <div class="settings-section-title">Connected Channels</div>
                 <div class="settings-section-desc">
                   Manage your messaging integrations.
                 </div>
+                {% if gmail_error %}
+                <div class="settings-card" role="alert">
+                  <div class="settings-row">
+                    <div class="settings-row-left">
+                      <div class="settings-row-label">Gmail connection failed</div>
+                      <div class="settings-row-desc">{{ gmail_error }}</div>
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+                {% if gmail_success %}
+                <div class="settings-card" role="status">
+                  <div class="settings-row">
+                    <div class="settings-row-left">
+                      <div class="settings-row-label">Gmail update</div>
+                      <div class="settings-row-desc">{{ gmail_success }}</div>
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
 
                 <div class="settings-card">
                   <!-- Gmail -->
@@ -585,7 +614,7 @@
                         class="btn-cancel"
                         style="font-size: 12px"
                       >
-                        Disconnect
+                        Disconnect Gmail
                       </button>
                     </form>
                     {% else %}
@@ -598,7 +627,7 @@
                         text-decoration: none;
                       "
                     >
-                      Connect
+                      Connect Gmail
                     </a>
                     {% endif %}
                   </div>
@@ -730,6 +759,19 @@
         document.getElementById(panelId).classList.add("active");
       }
 
+      function activateSettingsTabByName(tabName) {
+        const panelId = "spanel-" + (tabName || "profile");
+        const targetPanel = document.getElementById(panelId);
+        if (!targetPanel) return;
+
+        const targetNav = document.querySelector(
+          `.settings-nav-item[onclick*="${panelId}"]`
+        );
+        if (targetNav) {
+          switchSettingsTab(targetNav, panelId);
+        }
+      }
+
       function openPhotoPicker() {
         document.getElementById("photoInput").click();
       }
@@ -745,5 +787,6 @@
         reader.readAsDataURL(file);
       }
     </script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
   </body>
 </html>

@@ -139,8 +139,8 @@ def test_oauth_login_can_access_protected_routes(client, monkeypatch):
     client.get("/auth/callback?code=test-code&state=expected-state")
     response = client.get("/email/list")
 
-    assert response.status_code == 200
-    assert response.json == {"emails": []}
+    assert response.status_code == 409
+    assert response.json["error"] == "Gmail is not connected for this account."
 
 
 def test_gmail_connect_requires_login(client):
@@ -184,14 +184,14 @@ def test_gmail_callback_rejects_invalid_state_without_logging_out(client):
     response = client.get("/auth/gmail/callback?code=test-code&state=wrong-state")
 
     assert response.status_code == 302
-    assert "/auth/settings" in response.headers["Location"]
+    assert "/auth/dashboard?page=settings&tab=channels" in response.headers["Location"]
 
     status_response = client.get("/auth/status")
     assert status_response.status_code == 200
     assert status_response.json["email"] == "user@example.com"
 
-    settings_response = client.get("/auth/settings")
-    assert b"Gmail connection failed." in settings_response.data
+    settings_response = client.get("/auth/settings", follow_redirects=True)
+    assert b"Gmail connection failed" in settings_response.data
 
 
 def test_gmail_callback_stores_token(client, monkeypatch, app):
@@ -217,7 +217,7 @@ def test_gmail_callback_stores_token(client, monkeypatch, app):
     response = client.get("/auth/gmail/callback?code=test-code&state=expected-state")
 
     assert response.status_code == 302
-    assert "/auth/settings" in response.headers["Location"]
+    assert "/auth/dashboard?page=settings&tab=channels" in response.headers["Location"]
 
     with app.app_context():
         user = User.query.filter_by(email="user@example.com").first()
@@ -305,7 +305,7 @@ def test_disconnect_gmail_removes_token(client, app):
     response = client.post("/api/channels/gmail")
 
     assert response.status_code == 302
-    assert "/auth/settings" in response.headers["Location"]
+    assert "/auth/dashboard?page=settings&tab=channels" in response.headers["Location"]
 
     with app.app_context():
         user = User.query.filter_by(email="user@example.com").first()
@@ -319,7 +319,7 @@ def test_settings_page_shows_gmail_connection_state(client, app):
         "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
     )
 
-    disconnected_response = client.get("/auth/settings")
+    disconnected_response = client.get("/auth/settings", follow_redirects=True)
     assert b"Connect Gmail" in disconnected_response.data
     assert b"Disconnect Gmail" not in disconnected_response.data
 
@@ -335,6 +335,73 @@ def test_settings_page_shows_gmail_connection_state(client, app):
         )
         db.session.commit()
 
-    connected_response = client.get("/auth/settings")
+    connected_response = client.get("/auth/settings", follow_redirects=True)
     assert b"Disconnect Gmail" in connected_response.data
     assert b"gmail@example.com" in connected_response.data
+
+
+def test_settings_route_redirects_to_dashboard_settings(client):
+    client.post(
+        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+    )
+
+    response = client.get("/auth/settings")
+
+    assert response.status_code == 302
+    assert "/auth/dashboard?page=settings&tab=channels" in response.headers["Location"]
+
+
+def test_dashboard_contains_inbox_and_settings_bootstrap_state(client):
+    client.post(
+        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+    )
+
+    response = client.get("/auth/dashboard?page=settings&tab=channels")
+
+    assert response.status_code == 200
+    assert b'id="dashboard-state"' in response.data
+    assert b'data-initial-page="settings"' in response.data
+    assert b'data-initial-tab="channels"' in response.data
+    assert b'id="dashboard-body"' in response.data
+    assert b'id="dashboard-title"' in response.data
+    assert b'id="dashboard-toolbar-actions"' in response.data
+    assert b'id="inbox-content"' in response.data
+    assert b'id="dashboard-ai-panel"' in response.data
+    assert b"Loading inbox..." in response.data
+    assert b"Connect Gmail" in response.data
+
+
+def test_message_view_requires_login(client):
+    response = client.get("/auth/message/msg-1")
+
+    assert response.status_code == 302
+    assert "/auth/login" in response.headers["Location"]
+
+
+def test_message_view_renders_placeholder_content(client):
+    client.post(
+        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+    )
+
+    response = client.get(
+        "/auth/message/msg-1?folder=inbox&channel=gmail&page=dashboard"
+    )
+
+    assert response.status_code == 200
+    assert b"Message" in response.data
+    assert b"AI Summary" in response.data
+    assert b"AI-Suggested Replies" in response.data
+    assert b'id="summary-text"' in response.data
+    assert b'id="read-aloud-btn"' in response.data
+    assert b'id="message-body"' in response.data
+    assert b'id="reply-btn"' in response.data
+    assert b'id="forward-btn"' in response.data
+    assert b'id="archive-btn"' in response.data
+    assert b'id="delete-btn"' in response.data
+    assert b'id="suggestions-list"' in response.data
+    assert b"Alice Rodriguez" in response.data
+    assert b"Q3 Report Review - Feedback Needed" in response.data
+    assert (
+        b"/auth/dashboard?page=dashboard&amp;folder=inbox&amp;channel=gmail"
+        in response.data
+    )
