@@ -56,6 +56,8 @@ def _settings_context(**extra):
         "gmail_email": gmail_token.account_email if gmail_token else None,
         "gmail_error": session.pop("gmail_error", None),
         "gmail_success": session.pop("gmail_success", None),
+        "outlook_enabled": session.get("outlook_enabled", False),
+        "outlook_success": session.pop("outlook_success", None),
     }
     context.update(extra)
     return context
@@ -380,4 +382,23 @@ def disconnect_gmail():
         return jsonify({"message": "Gmail disconnected."})
 
     session["gmail_success"] = "Gmail disconnected."
+    return redirect(_dashboard_url(page="settings", tab="channels"))
+
+
+@channel_bp.route("/outlook", methods=["POST"])
+def toggle_outlook():
+    user = _current_user()
+    if user is None:
+        return _json_error("Unauthorized.", 401)
+
+    data = _request_data()
+    enabled = data.get("enabled", False)
+
+    # Set session flag for Outlook preference
+    session["outlook_enabled"] = bool(enabled)
+
+    if request.is_json:
+        return jsonify({"outlook_enabled": session["outlook_enabled"]})
+
+    session["outlook_success"] = "Outlook preference updated."
     return redirect(_dashboard_url(page="settings", tab="channels"))

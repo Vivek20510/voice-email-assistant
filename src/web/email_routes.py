@@ -6,6 +6,11 @@ from src.services.email_service import (
     read_email as gmail_read_email,
     send_email as gmail_send_email,
 )
+from src.services.outlook_service import (
+    OutlookServiceError,
+    list_emails as outlook_list_emails,
+    read_email as outlook_read_email,
+)
 
 email_bp = Blueprint("email", __name__, url_prefix="/email")
 messages_bp = Blueprint("messages", __name__, url_prefix="/api")
@@ -41,6 +46,14 @@ def _parse_limit():
 
 def _serialize_service_error(exc: EmailServiceError):
     return _json_error(exc.message, exc.status_code)
+
+
+def _serialize_outlook_error(exc: OutlookServiceError):
+    return _json_error(exc.message, exc.status_code)
+
+
+def _serialize_error(message: str, code: int):
+    return _json_error(message, code)
 
 
 def _send_payload_error(data):
@@ -156,5 +169,62 @@ def api_send_message():
         result = gmail_send_email(_current_user_id(), **payload)
     except EmailServiceError as exc:
         return _serialize_service_error(exc)
+
+    return jsonify(result)
+
+
+@messages_bp.route("/channels/outlook", methods=["POST"])
+def api_toggle_outlook():
+    auth_error = _require_login()
+    if auth_error:
+        return auth_error
+
+    data = _request_data()
+    enabled = data.get("enabled", False)
+
+    session["outlook_enabled"] = bool(enabled)
+
+    return jsonify({"outlook_enabled": session["outlook_enabled"]})
+
+
+@messages_bp.route("/outlook/inbox", methods=["GET"])
+def api_list_outlook_emails():
+    auth_error = _require_login()
+    if auth_error:
+        return auth_error
+
+    if not session.get("outlook_enabled", False):
+        return _serialize_error("Outlook not enabled.", 409)
+
+    limit = request.args.get("limit", 10, type=int)
+    sort_by = request.args.get("sort_by", "received_time")
+    ascending = request.args.get("ascending", "false").lower() == "true"
+
+    try:
+        result = outlook_list_emails(
+            _current_user_id(),
+            limit=limit,
+            sort_by=sort_by,
+            ascending=ascending,
+        )
+    except OutlookServiceError as exc:
+        return _serialize_outlook_error(exc)
+
+    return jsonify(result)
+
+
+@messages_bp.route("/outlook/inbox/<encoded_message_id>", methods=["GET"])
+def api_read_outlook_email(encoded_message_id):
+    auth_error = _require_login()
+    if auth_error:
+        return auth_error
+
+    if not session.get("outlook_enabled", False):
+        return _serialize_error("Outlook not enabled.", 409)
+
+    try:
+        result = outlook_read_email(_current_user_id(), encoded_message_id)
+    except OutlookServiceError as exc:
+        return _serialize_outlook_error(exc)
 
     return jsonify(result)

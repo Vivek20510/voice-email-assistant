@@ -668,16 +668,30 @@
                   <div class="settings-row">
                     <div class="settings-row-left">
                       <div class="settings-row-label">📮 Outlook</div>
-                      <div class="settings-row-desc">Not connected</div>
+                      {% if outlook_enabled %}
+                      <div class="settings-row-desc">Enabled</div>
+                      {% else %}
+                      <div class="settings-row-desc">Not enabled</div>
+                      {% endif %}
                     </div>
 
+                    {% if outlook_enabled %}
+                    <button
+                      class="btn-cancel"
+                      style="padding: 6px 14px; font-size: 12px"
+                      onclick="toggleOutlook(false)"
+                    >
+                      Disable Outlook
+                    </button>
+                    {% else %}
                     <button
                       class="btn-save"
                       style="padding: 6px 14px; font-size: 12px"
-                      onclick="showToast('Connecting Outlook...')"
+                      onclick="toggleOutlook(true)"
                     >
-                      Connect
+                      Enable Outlook
                     </button>
+                    {% endif %}
                   </div>
                 </div>
               </div>
@@ -785,6 +799,25 @@
           document.getElementById("profilePhoto").src = e.target.result;
         };
         reader.readAsDataURL(file);
+      }
+
+      async function toggleOutlook(enabled) {
+        try {
+          const response = await fetch('/api/channels/outlook', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ enabled })
+          });
+          const result = await response.json();
+          if (response.ok) {
+            location.reload();
+          } else {
+            showToast('Error: ' + (result.error || 'Failed to toggle Outlook'));
+          }
+        } catch (error) {
+          showToast('Network error');
+        }
       }
     </script>
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
