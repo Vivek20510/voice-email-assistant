@@ -1,6 +1,5 @@
 """Unit tests for Outlook service."""
 
-import base64
 import sys
 from datetime import datetime, timezone
 
@@ -32,10 +31,11 @@ def test_list_emails_raises_error_when_outlook_unavailable():
 def test_list_emails_returns_empty_list_when_no_messages(monkeypatch):
     """Test that list_emails function signature and structure is correct."""
     from src.services.outlook_service import list_emails
-    
+
     # We can't fully test list_emails without Outlook COM on Windows
     # But we can verify the function exists and has the right signature
     import inspect
+
     sig = inspect.signature(list_emails)
     assert "user_id" in sig.parameters
     assert "limit" in sig.parameters
@@ -73,7 +73,7 @@ def test_read_email_raises_error_when_outlook_unavailable():
 def test_read_email_raises_error_on_invalid_entry_id():
     """Test that read_email raises error on truly invalid base64 that fails decoding."""
     from src.services.outlook_service import OutlookServiceError, read_email
-    
+
     with pytest.raises(OutlookServiceError) as exc_info:
         # This will fail because Outlook is not available
         read_email(user_id=1, encoded_message_id="dGVzdA==")

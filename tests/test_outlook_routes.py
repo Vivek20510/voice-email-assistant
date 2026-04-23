@@ -1,8 +1,6 @@
 """Integration tests for Outlook routes."""
 
-import sys
 
-import pytest
 
 
 def test_outlook_toggle_requires_login(client):
@@ -15,7 +13,9 @@ def test_outlook_toggle_requires_login(client):
 
 def test_outlook_toggle_sets_session_enabled(client):
     """Test that POST /api/channels/outlook sets session flag."""
-    client.post("/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"})
+    client.post(
+        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+    )
 
     response = client.post("/api/channels/outlook", json={"enabled": True})
 
@@ -28,7 +28,9 @@ def test_outlook_toggle_sets_session_enabled(client):
 
 def test_outlook_toggle_sets_session_disabled(client):
     """Test that POST /api/channels/outlook can disable Outlook."""
-    client.post("/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"})
+    client.post(
+        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+    )
 
     client.post("/api/channels/outlook", json={"enabled": True})
     response = client.post("/api/channels/outlook", json={"enabled": False})
@@ -50,7 +52,9 @@ def test_outlook_inbox_requires_login(client):
 
 def test_outlook_inbox_requires_enabled(client):
     """Test that GET /api/outlook/inbox requires outlook_enabled session flag."""
-    client.post("/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"})
+    client.post(
+        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+    )
 
     response = client.get("/api/outlook/inbox")
 
@@ -60,7 +64,9 @@ def test_outlook_inbox_requires_enabled(client):
 
 def test_outlook_inbox_returns_error_when_unavailable(client, monkeypatch):
     """Test that GET /api/outlook/inbox returns 503 when Outlook unavailable."""
-    client.post("/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"})
+    client.post(
+        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+    )
     client.post("/api/channels/outlook", json={"enabled": True})
 
     # Mock is_outlook_available to return False
@@ -76,7 +82,9 @@ def test_outlook_inbox_returns_error_when_unavailable(client, monkeypatch):
 
 def test_outlook_inbox_returns_empty_list_when_no_messages(client, monkeypatch):
     """Test that GET /api/outlook/inbox returns empty list when no messages."""
-    client.post("/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"})
+    client.post(
+        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+    )
     client.post("/api/channels/outlook", json={"enabled": True})
 
     # Mock list_emails to return empty list
@@ -96,7 +104,9 @@ def test_outlook_inbox_returns_empty_list_when_no_messages(client, monkeypatch):
 
 def test_outlook_inbox_returns_messages_when_available(client, monkeypatch):
     """Test that GET /api/outlook/inbox returns messages when Outlook available."""
-    client.post("/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"})
+    client.post(
+        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+    )
     client.post("/api/channels/outlook", json={"enabled": True})
 
     # Mock list_emails to return sample messages
@@ -145,7 +155,9 @@ def test_outlook_inbox_detail_requires_login(client):
 
 def test_outlook_inbox_detail_requires_enabled(client):
     """Test that GET /api/outlook/inbox/<id> requires outlook_enabled."""
-    client.post("/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"})
+    client.post(
+        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+    )
 
     response = client.get("/api/outlook/inbox/dGVzdF9pZA==")
 
@@ -154,7 +166,9 @@ def test_outlook_inbox_detail_requires_enabled(client):
 
 def test_outlook_inbox_detail_returns_message(client, monkeypatch):
     """Test that GET /api/outlook/inbox/<id> returns message detail."""
-    client.post("/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"})
+    client.post(
+        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+    )
     client.post("/api/channels/outlook", json={"enabled": True})
 
     # Mock read_email to return sample message
@@ -184,7 +198,9 @@ def test_outlook_inbox_detail_returns_message(client, monkeypatch):
 
 def test_outlook_inbox_detail_returns_error_when_not_found(client, monkeypatch):
     """Test that GET /api/outlook/inbox/<id> returns 404 when message not found."""
-    client.post("/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"})
+    client.post(
+        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+    )
     client.post("/api/channels/outlook", json={"enabled": True})
 
     from src.services.outlook_service import OutlookServiceError

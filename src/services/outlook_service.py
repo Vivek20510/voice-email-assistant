@@ -35,9 +35,8 @@ def is_outlook_available() -> bool:
     try:
         import win32com.client
 
-        outlook = win32com.client.Dispatch("Outlook.Application")
-        # If we can dispatch, Outlook is available
-        outlook = None
+        win32com.client.Dispatch("Outlook.Application")
+
         return True
     except (ImportError, OSError, Exception):
         # ImportError: win32com not installed
@@ -66,9 +65,7 @@ def list_emails(
         OutlookNotAvailableError: If Outlook is not installed
     """
     if not is_outlook_available():
-        raise OutlookNotAvailableError(
-            "Outlook is not installed on this system.", 503
-        )
+        raise OutlookNotAvailableError("Outlook is not installed on this system.", 503)
 
     try:
         import win32com.client
@@ -128,9 +125,7 @@ def read_email(user_id: int, encoded_message_id: str) -> dict:
         OutlookServiceError: If message not found or decoding fails
     """
     if not is_outlook_available():
-        raise OutlookNotAvailableError(
-            "Outlook is not installed on this system.", 503
-        )
+        raise OutlookNotAvailableError("Outlook is not installed on this system.", 503)
 
     # Decode EntryID from base64
     try:
