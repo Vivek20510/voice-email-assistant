@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, request, session
+import logging
 
 from src.services.email_service import (
     EmailServiceError,
@@ -12,6 +13,8 @@ from src.services.outlook_service import (
     read_email as outlook_read_email,
 )
 
+logger = logging.getLogger(__name__)
+
 email_bp = Blueprint("email", __name__, url_prefix="/email")
 messages_bp = Blueprint("messages", __name__, url_prefix="/api")
 
@@ -22,8 +25,34 @@ def _json_error(message: str, code: int):
 
 def _require_login():
     if not session.get("user_id"):
+        logger.debug("Request rejected: not logged in")
         return _json_error("Unauthorized.", 401)
     return None
+
+
+def _validate_outlook_session():
+    """Validate Outlook session state before service calls.
+
+    Returns:
+        tuple: (is_valid: bool, error_response: tuple | None)
+            If valid, returns (True, None)
+            If invalid, returns (False, error_response)
+
+    Checks:
+        - User is logged in (session['user_id'] exists)
+        - Outlook is enabled (session['outlook_enabled'] is True)
+    """
+    if not session.get("user_id"):
+        logger.debug("Outlook request rejected: not logged in")
+        return False, _json_error("Unauthorized.", 401)
+
+    if not session.get("outlook_enabled", False):
+        logger.debug(
+            f"Outlook request rejected: not enabled for user {session.get('user_id')}"
+        )
+        return False, _json_error("Outlook not enabled.", 409)
+
+    return True, None
 
 
 def _request_data():
@@ -182,49 +211,109 @@ def api_toggle_outlook():
     data = _request_data()
     enabled = data.get("enabled", False)
 
+    user_id = session.get("user_id")
     session["outlook_enabled"] = bool(enabled)
+    logger.debug(f"User {user_id} toggled Outlook: enabled={bool(enabled)}")
 
     return jsonify({"outlook_enabled": session["outlook_enabled"]})
 
 
 @messages_bp.route("/outlook/inbox", methods=["GET"])
 def api_list_outlook_emails():
-    auth_error = _require_login()
-    if auth_error:
-        return auth_error
+    """List Outlook inbox emails.
 
-    if not session.get("outlook_enabled", False):
-        return _serialize_error("Outlook not enabled.", 409)
+    Requires:
+        - User logged in (session['user_id'])
+        - Outlook enabled (session['outlook_enabled'] = True)
 
+    Query params:
+        - limit: Max emails to return (1-100, default 10)
+        - sort_by: Sort field ("received_time" or "subject", default "received_time")
+        - ascending: Sort order ("true" or "false", default "false")
+
+    Error responses:
+        - 401: Not logged in
+        - 409: Outlook not enabled
+        - 503: Outlook unavailable
+
+    Success response:
+        - 200: {"emails": [...], "messages": [...], "next_page_token": null}
+    """
+    # Session validation (checks login + enabled)
+    is_valid, error_response = _validate_outlook_session()
+    if not is_valid:
+        return error_response
+
+    user_id = session.get("user_id")
     limit = request.args.get("limit", 10, type=int)
     sort_by = request.args.get("sort_by", "received_time")
     ascending = request.args.get("ascending", "false").lower() == "true"
 
+    logger.debug(
+        f"List Outlook emails - user {user_id}: limit={limit}, sort_by={sort_by}, ascending={ascending}"
+    )
+
     try:
         result = outlook_list_emails(
-            _current_user_id(),
+            user_id,
             limit=limit,
             sort_by=sort_by,
             ascending=ascending,
         )
+        logger.debug(
+            f"Successfully listed {len(result.get('emails', []))} Outlook emails"
+        )
+        return jsonify(result)
     except OutlookServiceError as exc:
+        logger.error(
+            f"Outlook list error for user {user_id}: {exc.message} (code {exc.status_code})"
+        )
         return _serialize_outlook_error(exc)
-
-    return jsonify(result)
+    except Exception as exc:
+        logger.error(f"Unexpected error listing Outlook emails: {exc}", exc_info=True)
+        return _json_error("Internal server error.", 500)
 
 
 @messages_bp.route("/outlook/inbox/<encoded_message_id>", methods=["GET"])
 def api_read_outlook_email(encoded_message_id):
-    auth_error = _require_login()
-    if auth_error:
-        return auth_error
+    """Read a single Outlook inbox email.
 
-    if not session.get("outlook_enabled", False):
-        return _serialize_error("Outlook not enabled.", 409)
+    Requires:
+        - User logged in (session['user_id'])
+        - Outlook enabled (session['outlook_enabled'] = True)
+
+    Path params:
+        - encoded_message_id: Base64-encoded Outlook EntryID
+
+    Error responses:
+        - 400: Invalid message ID format
+        - 401: Not logged in
+        - 404: Message not found
+        - 409: Outlook not enabled
+        - 503: Outlook unavailable
+
+    Success response:
+        - 200: Message details dict
+    """
+    # Session validation (checks login + enabled)
+    is_valid, error_response = _validate_outlook_session()
+    if not is_valid:
+        return error_response
+
+    user_id = session.get("user_id")
+    logger.debug(
+        f"Read Outlook email - user {user_id}: message_id={encoded_message_id[:20]}..."
+    )
 
     try:
-        result = outlook_read_email(_current_user_id(), encoded_message_id)
+        result = outlook_read_email(user_id, encoded_message_id)
+        logger.debug(f"Successfully read Outlook email for user {user_id}")
+        return jsonify(result)
     except OutlookServiceError as exc:
+        logger.warning(
+            f"Outlook read error for user {user_id}: {exc.message} (code {exc.status_code})"
+        )
         return _serialize_outlook_error(exc)
-
-    return jsonify(result)
+    except Exception as exc:
+        logger.error(f"Unexpected error reading Outlook email: {exc}", exc_info=True)
+        return _json_error("Internal server error.", 500)

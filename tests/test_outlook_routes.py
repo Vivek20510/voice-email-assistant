@@ -1,10 +1,11 @@
 """Integration tests for Outlook routes."""
 
 
-
-
 def test_outlook_toggle_requires_login(client):
-    """Test that POST /api/channels/outlook requires login."""
+    """Test that POST /api/channels/outlook requires authentication.
+
+    Edge case: Unauthenticated request should return 401.
+    """
     response = client.post("/api/channels/outlook", json={"enabled": True})
 
     assert response.status_code == 401
@@ -43,7 +44,10 @@ def test_outlook_toggle_sets_session_disabled(client):
 
 
 def test_outlook_inbox_requires_login(client):
-    """Test that GET /api/outlook/inbox requires login."""
+    """Test that GET /api/outlook/inbox requires authentication.
+
+    Edge case: Unauthenticated request should return 401.
+    """
     response = client.get("/api/outlook/inbox")
 
     assert response.status_code == 401
@@ -147,7 +151,10 @@ def test_outlook_inbox_returns_messages_when_available(client, monkeypatch):
 
 
 def test_outlook_inbox_detail_requires_login(client):
-    """Test that GET /api/outlook/inbox/<id> requires login."""
+    """Test that GET /api/outlook/inbox/<id> requires authentication.
+
+    Edge case: Unauthenticated request should return 401.
+    """
     response = client.get("/api/outlook/inbox/dGVzdF9pZA==")
 
     assert response.status_code == 401
