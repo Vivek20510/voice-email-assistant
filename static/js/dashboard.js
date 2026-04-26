@@ -1,10 +1,29 @@
 let inboxMessagesCache = [];
 let currentMessageId = null;
+let currentDashboardView = "sb-inbox";
+
+const dashboardViewTitles = {
+  "sb-inbox": "Inbox",
+  "sb-emails": "Email",
+  "sb-draft": "Draft",
+  "sb-sent": "Sent",
+  "sb-archive": "Archive",
+  "sb-trash": "Trash",
+  "sb-whatsapp": "WhatsApp",
+  "sb-telegram": "Telegram",
+  "sb-outlook": "Outlook",
+  "sb-work": "Work",
+  "sb-personal": "Personal",
+  "sb-promos": "Promotions",
+};
+
+const gmailViews = new Set(["sb-inbox", "sb-emails"]);
 
 function setInboxContent(html) {
   const container = document.getElementById("inbox-content");
   if (container) {
     container.innerHTML = html;
+    container.classList.toggle("has-feedback", html.includes("inbox-feedback"));
   }
 }
 
@@ -21,10 +40,13 @@ function setDashboardMessageMode(isMessageMode) {
     aiPanel.hidden = isMessageMode;
   }
   if (title) {
-    title.textContent = isMessageMode ? "Message" : "Inbox";
+    title.textContent = isMessageMode
+      ? "Message"
+      : dashboardViewTitles[currentDashboardView] || "Inbox";
   }
   if (toolbarActions) {
     toolbarActions.hidden = isMessageMode;
+    toolbarActions.style.display = isMessageMode ? "none" : "";
   }
 }
 
@@ -35,6 +57,91 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function setActiveSidebarItem(itemId) {
+  document.querySelectorAll(".sidebar-item").forEach((item) => {
+    item.classList.toggle("active", item.id === itemId);
+  });
+}
+
+function decodeHtmlEntities(value) {
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = String(value ?? "");
+  return textarea.value;
+}
+
+function toPreviewText(value) {
+  return decodeHtmlEntities(value)
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function formatMessageLabel(label) {
+  const value = String(label || "").trim();
+  const hiddenLabels = new Set([
+    "INBOX",
+    "UNREAD",
+    "SENT",
+    "DRAFT",
+    "TRASH",
+    "SPAM",
+    "IMPORTANT",
+  ]);
+  const friendlyLabels = {
+    CATEGORY_FORUMS: "Forums",
+    CATEGORY_PERSONAL: "Personal",
+    CATEGORY_PROMOTIONS: "Promotions",
+    CATEGORY_SOCIAL: "Social",
+    CATEGORY_UPDATES: "Updates",
+    STARRED: "Starred",
+  };
+
+  if (!value || hiddenLabels.has(value)) {
+    return "";
+  }
+
+  if (friendlyLabels[value]) {
+    return friendlyLabels[value];
+  }
+
+  return value
+    .replace(/^Label_/, "")
+    .replace(/^CATEGORY_/, "")
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatPlainMessageBody(bodyText) {
+  const text = String(bodyText || "").trim();
+  if (!text) {
+    return "";
+  }
+
+  return text
+    .split(/\n{2,}/)
+    .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+}
+
+function buildEmailHtmlDocument(bodyHtml) {
+  return `<!doctype html>
+    <html>
+      <head>
+        <base target="_blank">
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+          html, body { margin: 0; padding: 0; background: #fff; color: #222; }
+          body { font: 16px/1.6 Arial, Helvetica, sans-serif; overflow-wrap: anywhere; }
+          img, table { max-width: 100%; }
+          pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+        </style>
+      </head>
+      <body>${bodyHtml || ""}</body>
+    </html>`;
 }
 
 function formatTimestamp(value) {
@@ -55,6 +162,67 @@ function formatTimestamp(value) {
   });
 }
 
+function formatInboxTime(value) {
+  if (!value) {
+    return "";
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfYesterday = new Date(startOfToday);
+  startOfYesterday.setDate(startOfToday.getDate() - 1);
+
+  if (parsed >= startOfToday) {
+    return parsed.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  if (parsed >= startOfYesterday) {
+    return "Yesterday";
+  }
+
+  return parsed.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+function getInboxGroupLabel(value) {
+  if (!value) {
+    return "Earlier";
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "Earlier";
+  }
+
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfYesterday = new Date(startOfToday);
+  startOfYesterday.setDate(startOfToday.getDate() - 1);
+
+  if (parsed >= startOfToday) {
+    return "Today";
+  }
+
+  if (parsed >= startOfYesterday) {
+    return "Yesterday";
+  }
+
+  return parsed.toLocaleDateString([], { month: "long", day: "numeric" });
+}
+
+function formatChannelName(channel) {
+  const value = String(channel || "gmail").trim().toLowerCase();
+  if (value === "gmail") {
+    return "Email";
+  }
+
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 function renderInboxLoading() {
   setDashboardMessageMode(false);
   setInboxContent(`
@@ -71,6 +239,20 @@ function renderInboxEmpty() {
     <div class="inbox-feedback" data-state="empty">
       <h3>No emails yet</h3>
       <p>Your inbox is connected, but there are no messages to show right now.</p>
+    </div>
+  `);
+}
+
+function renderEmptyView(viewId) {
+  currentMessageId = null;
+  currentDashboardView = viewId;
+  setDashboardMessageMode(false);
+  const title = dashboardViewTitles[viewId] || "This tab";
+
+  setInboxContent(`
+    <div class="inbox-feedback" data-state="empty">
+      <h3>No messages</h3>
+      <p>${escapeHtml(title)} messages will appear here when this channel is connected.</p>
     </div>
   `);
 }
@@ -99,32 +281,59 @@ function renderInboxError(message) {
 
 function renderInboxMessages(messages) {
   setDashboardMessageMode(false);
+  let activeGroup = "";
   const rows = messages
     .map((message) => {
       const sender = message.sender || message.sender_email || "Unknown sender";
       const subject = message.subject || "(No subject)";
-      const snippet = message.snippet || "No preview available.";
-      const labels = Array.isArray(message.labels) ? message.labels : [];
+      const snippet = toPreviewText(message.snippet) || "No preview available.";
+      const channel = formatChannelName(message.channel);
+      const groupLabel = getInboxGroupLabel(message.received_at);
+      const labels = Array.isArray(message.labels)
+        ? message.labels.map(formatMessageLabel).filter(Boolean)
+        : [];
       const unreadClass = message.unread ? " is-unread" : "";
       const labelMarkup = labels.length
-        ? `<div class="inbox-meta">${labels.slice(0, 3).map((label) => `<span class="inbox-chip">${escapeHtml(label)}</span>`).join("")}</div>`
+        ? labels.slice(0, 2).map((label) => `<span class="inbox-chip">${escapeHtml(label)}</span>`).join("")
         : "";
+      const groupMarkup =
+        groupLabel !== activeGroup
+          ? `<div class="inbox-date-divider">${escapeHtml(groupLabel)}</div>`
+          : "";
+      activeGroup = groupLabel;
 
-      return `
+      return `${groupMarkup}
         <article class="inbox-item${unreadClass}" data-message-id="${escapeHtml(message.id)}">
-          <div class="inbox-item-head">
-            <strong class="inbox-sender">${escapeHtml(sender)}</strong>
-            <span class="inbox-time">${escapeHtml(formatTimestamp(message.received_at))}</span>
+          <div class="inbox-avatar">${escapeHtml(getAvatarInitials(sender))}</div>
+          <div class="inbox-message-main">
+            <div class="inbox-item-head">
+              <strong class="inbox-sender">${escapeHtml(sender)}</strong>
+              <span class="inbox-subject">${escapeHtml(subject)}</span>
+            </div>
+            <p class="inbox-snippet">${escapeHtml(snippet)}</p>
           </div>
-          <div class="inbox-subject">${escapeHtml(subject)}</div>
-          <p class="inbox-snippet">${escapeHtml(snippet)}</p>
-          ${labelMarkup}
+          <div class="inbox-message-side">
+            <time class="inbox-time">${escapeHtml(formatInboxTime(message.received_at))}</time>
+            <div class="inbox-meta">
+              <span class="inbox-chip inbox-channel">${escapeHtml(channel)}</span>
+              ${labelMarkup}
+            </div>
+            ${message.unread ? '<span class="inbox-unread-dot" aria-label="Unread"></span>' : ""}
+          </div>
         </article>
       `;
     })
     .join("");
 
   setInboxContent(`<div class="inbox-list">${rows}</div>`);
+}
+
+function markMessageRead(messageId) {
+  inboxMessagesCache = inboxMessagesCache.map((message) =>
+    String(message.id) === String(messageId)
+      ? { ...message, unread: false }
+      : message
+  );
 }
 
 function getAvatarInitials(name) {
@@ -171,14 +380,9 @@ function renderMessageView(message) {
   const subject = message.subject || "(No subject)";
   const bodyText = message.body_text || "";
   const bodyHtml = message.body_html || "";
-  const safeBody = bodyText
-    ? bodyText
-        .split(/\n{2,}/)
-        .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
-        .join("")
-    : bodyHtml
-      ? `<pre>${escapeHtml(bodyHtml)}</pre>`
-      : "<p>No message body available.</p>";
+  const safeBody = bodyHtml
+    ? `<iframe id="message-html-frame" class="message-html-frame" title="Email message body" sandbox referrerpolicy="no-referrer"></iframe>`
+    : formatPlainMessageBody(bodyText) || "<p>No message body available.</p>";
   const suggestions = [
     "Thanks, I have received this and will review it shortly.",
     "Got it. I will respond with a detailed update soon.",
@@ -200,7 +404,6 @@ function renderMessageView(message) {
       <div class="message-view-wrap message-view-wrap-inline">
         <div class="message-detail-topbar message-detail-topbar-inline">
           <button type="button" class="back-btn message-detail-back" onclick="restoreInboxList()">← Back</button>
-          <h2 class="message-detail-title">Message</h2>
         </div>
 
         <div class="message-detail-shell message-detail-shell-inline">
@@ -258,10 +461,20 @@ function renderMessageView(message) {
       </div>
     </section>
   `);
+
+  const frame = document.getElementById("message-html-frame");
+  if (frame) {
+    frame.srcdoc = buildEmailHtmlDocument(bodyHtml);
+  }
 }
 
 function restoreInboxList() {
   currentMessageId = null;
+  if (!gmailViews.has(currentDashboardView)) {
+    renderEmptyView(currentDashboardView);
+    return;
+  }
+
   if (inboxMessagesCache.length) {
     renderInboxMessages(inboxMessagesCache);
     return;
@@ -271,6 +484,7 @@ function restoreInboxList() {
 
 async function loadMessageDetail(messageId) {
   currentMessageId = messageId;
+  markMessageRead(messageId);
   renderMessageLoading();
 
   try {
@@ -298,6 +512,9 @@ async function loadMessageDetail(messageId) {
 }
 
 async function loadInboxMessages() {
+  currentDashboardView = gmailViews.has(currentDashboardView)
+    ? currentDashboardView
+    : "sb-inbox";
   renderInboxLoading();
 
   try {
@@ -330,6 +547,10 @@ async function loadInboxMessages() {
 
     inboxMessagesCache = messages;
 
+    if (!gmailViews.has(currentDashboardView)) {
+      return;
+    }
+
     if (!messages.length) {
       renderInboxEmpty();
       return;
@@ -339,6 +560,27 @@ async function loadInboxMessages() {
   } catch (error) {
     renderInboxError("Network error while loading inbox.");
   }
+}
+
+function switchSidebar(itemId) {
+  if (typeof switchPage === "function") {
+    switchPage("dashboard");
+  }
+
+  currentDashboardView = itemId;
+  setActiveSidebarItem(itemId);
+
+  if (gmailViews.has(itemId)) {
+    if (inboxMessagesCache.length) {
+      renderInboxMessages(inboxMessagesCache);
+      return;
+    }
+
+    loadInboxMessages();
+    return;
+  }
+
+  renderEmptyView(itemId);
 }
 
 function applyInitialDashboardState() {
@@ -387,5 +629,6 @@ function bindDashboardInteractions() {
 document.addEventListener("DOMContentLoaded", () => {
   applyInitialDashboardState();
   bindDashboardInteractions();
+  setActiveSidebarItem(currentDashboardView);
   loadInboxMessages();
 });
