@@ -146,6 +146,67 @@ def test_read_routes_return_live_message_detail(client, app, monkeypatch):
     api_response = client.get("/api/messages/msg-1")
     assert api_response.status_code == 200
     assert api_response.json["body_html"] == "<p>Body</p>"
+    assert api_response.json["unread"] is False
+
+
+def test_api_read_persists_app_only_read_state(client, app, monkeypatch):
+    _signup(client)
+    _attach_gmail_token(app)
+
+    def unread_message():
+        return {
+            "id": "msg-1",
+            "gmail_id": "msg-1",
+            "sender": "Alice",
+            "sender_email": "alice@example.com",
+            "to": "user@example.com",
+            "cc": None,
+            "bcc": None,
+            "subject": "Hello",
+            "body_text": "Body",
+            "body_html": "<p>Body</p>",
+            "snippet": "Preview",
+            "received_at": "2026-04-22T10:00:00+00:00",
+            "unread": True,
+            "labels": ["INBOX", "UNREAD"],
+            "channel": "gmail",
+        }
+
+    def fake_read_email(user_id, gmail_id):
+        return unread_message()
+
+    def fake_list_emails(user_id, limit, page_token=None, label_ids=None):
+        message = unread_message()
+        list_message = {
+            key: message[key]
+            for key in [
+                "id",
+                "gmail_id",
+                "sender",
+                "sender_email",
+                "to",
+                "subject",
+                "snippet",
+                "received_at",
+                "unread",
+                "labels",
+                "channel",
+            ]
+        }
+        return {"emails": [list_message], "messages": [list_message], "next_page_token": None}
+
+    monkeypatch.setattr("src.web.email_routes.gmail_read_email", fake_read_email)
+    monkeypatch.setattr("src.web.email_routes.gmail_list_emails", fake_list_emails)
+
+    read_response = client.get("/api/messages/msg-1")
+    assert read_response.status_code == 200
+    assert read_response.json["unread"] is False
+    assert "UNREAD" not in read_response.json["labels"]
+
+    list_response = client.get("/api/messages?channel=gmail")
+    assert list_response.status_code == 200
+    assert list_response.json["messages"][0]["unread"] is False
+    assert "UNREAD" not in list_response.json["messages"][0]["labels"]
 
 
 def test_send_routes_send_gmail_messages(client, app, monkeypatch):

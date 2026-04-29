@@ -128,6 +128,41 @@ def test_read_email_handles_multipart_payload(app, monkeypatch):
     assert result["channel"] == "gmail"
 
 
+def test_read_email_does_not_modify_gmail_unread_label(app, monkeypatch):
+    user_id = _create_connected_user(app)
+    calls = []
+
+    def fake_request(method, url, headers=None, params=None, json=None, timeout=None):
+        calls.append({"method": method, "url": url, "json": json})
+        return DummyResponse(
+            payload={
+                "id": "msg-3",
+                "snippet": "Unread snippet",
+                "labelIds": ["INBOX", "UNREAD"],
+                "payload": {
+                    "mimeType": "text/plain",
+                    "headers": [
+                        {"name": "From", "value": "Alice <alice@example.com>"},
+                        {"name": "To", "value": "user@example.com"},
+                        {"name": "Subject", "value": "Unread"},
+                    ],
+                    "body": {"data": _gmail_body("Unread body")},
+                },
+            }
+        )
+
+    monkeypatch.setattr("src.services.email_service.requests.request", fake_request)
+
+    with app.app_context():
+        result = email_service.read_email(user_id, "msg-3")
+
+    assert result["unread"] is True
+    assert "UNREAD" in result["labels"]
+    assert len(calls) == 1
+    assert calls[0]["method"] == "GET"
+    assert calls[0]["url"].endswith("/messages/msg-3")
+
+
 def test_send_email_encodes_rfc2822_and_calls_gmail(app, monkeypatch):
     user_id = _create_connected_user(app)
     seen = {}

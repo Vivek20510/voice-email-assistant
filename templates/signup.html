@@ -1,10 +1,7 @@
 <!-- signup.html -->
-{% extends 'base.html' %}
-
-{% block content %}
+{% extends 'base.html' %} {% block content %}
 <div id="screen-login" class="screen active">
   <div class="login-split">
-
     <!-- Left Panel -->
     <div class="login-left">
       <div class="login-left-bg"></div>
@@ -17,11 +14,12 @@
         </div>
 
         <div class="login-headline">
-          One inbox<br>for <em>every</em><br>channel.
+          One inbox<br />for <em>every</em><br />channel.
         </div>
 
         <div class="login-subline">
-          Email, WhatsApp, Telegram — unified, AI-powered, and beautifully simple.
+          Email, WhatsApp, Telegram — unified, AI-powered, and beautifully
+          simple.
         </div>
       </div>
 
@@ -46,23 +44,25 @@
     <!-- Right Panel -->
     <div class="login-right">
       <div class="login-card">
-
         <div class="login-card-title">Create Account</div>
-        <div class="login-card-sub">
-          Register to get started
-        </div>
+        <div class="login-card-sub">Register to get started</div>
 
         <div class="auth-tabs signup-active">
           <a href="/auth/login" class="auth-tab">Login</a>
           <a href="/auth/signup" class="auth-tab active">Register</a>
         </div>
 
-        <form action="/auth/signup" method="post"
-          oninput="confirm_password.setCustomValidity(
-          confirm_password.value != password.value
-          ? 'Passwords do not match'
-          : '')">
-
+        <form
+          action="/auth/signup"
+          method="post"
+          oninput="
+            confirm_password.setCustomValidity(
+              confirm_password.value != password.value
+                ? 'Passwords do not match'
+                : '',
+            )
+          "
+        >
           <!-- Full Name -->
           <div class="form-group">
             <label class="form-label">Full Name</label>
@@ -73,7 +73,7 @@
               placeholder="Priya Sharma"
               required
               oninput="hideSignupError()"
-            >
+            />
           </div>
 
           <!-- Email -->
@@ -86,7 +86,7 @@
               placeholder="you@example.com"
               required
               oninput="hideSignupError()"
-            >
+            />
           </div>
 
           <!-- Password -->
@@ -99,15 +99,19 @@
               class="form-input"
               placeholder="Create a password"
               required
-              oninput="checkPassword(); hideSignupError();"
-            >
+              oninput="
+                checkPassword();
+                hideSignupError();
+              "
+            />
 
             <small
               class="password-note"
               id="passwordHint"
-              style="display:none; color:red;"
+              style="display: none; color: red"
             >
-              Password must contain 8 characters, 1 capital, 1 small, and 1 symbol.
+              Password must contain 8 characters, 1 capital, 1 small, and 1
+              symbol.
             </small>
           </div>
 
@@ -121,51 +125,42 @@
               placeholder="Confirm your password"
               required
               oninput="hideSignupError()"
-            >
+            />
           </div>
 
           <!-- Error Message -->
           {% if error %}
-          <div class="login-error" id="signupError">
-            {{ error }}
-          </div>
+          <div class="login-error" id="signupError">{{ error }}</div>
           {% endif %}
 
-          <button type="submit" class="btn-primary">
-            Create Account
-          </button>
-
+          <button type="submit" class="btn-primary">Create Account</button>
         </form>
-
       </div>
     </div>
-
   </div>
 </div>
 
 <script>
-function hideSignupError() {
+  function hideSignupError() {
     const errorBox = document.getElementById("signupError");
     if (errorBox) {
-        errorBox.style.display = "none";
+      errorBox.style.display = "none";
     }
-}
+  }
 
-function checkPassword() {
+  function checkPassword() {
     const password = document.getElementById("password").value;
     const hint = document.getElementById("passwordHint");
 
     const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,}$/;
 
     if (password.length === 0) {
-        hint.style.display = "none";
-    } 
-    else if (!regex.test(password)) {
-        hint.style.display = "block";
-    } 
-    else {
-        hint.style.display = "none";
+      hint.style.display = "none";
+    } else if (!regex.test(password)) {
+      hint.style.display = "block";
+    } else {
+      hint.style.display = "none";
     }
-}
+  }
 </script>
 {% endblock %}

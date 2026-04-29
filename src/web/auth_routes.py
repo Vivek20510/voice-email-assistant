@@ -20,6 +20,7 @@ from src.services.auth import (
     hash_password,
     verify_password,
 )
+from src.services.outlook_service import connect_outlook
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 channel_bp = Blueprint("channels", __name__, url_prefix="/api/channels")
@@ -48,14 +49,25 @@ def _gmail_token_for_user(user_id: int | None):
     return UserToken.query.filter_by(user_id=user_id, service="gmail").first()
 
 
+def _outlook_token_for_user(user_id: int | None):
+    if not user_id:
+        return None
+    return UserToken.query.filter_by(user_id=user_id, service="outlook").first()
+
+
 def _settings_context(**extra):
     gmail_token = _gmail_token_for_user(session.get("user_id"))
+    outlook_token = _outlook_token_for_user(session.get("user_id"))
     context = {
         "email": session.get("user_email"),
         "gmail_connected": gmail_token is not None,
         "gmail_email": gmail_token.account_email if gmail_token else None,
+        "outlook_connected": outlook_token is not None,
+        "outlook_email": outlook_token.account_email if outlook_token else None,
         "gmail_error": session.pop("gmail_error", None),
         "gmail_success": session.pop("gmail_success", None),
+        "outlook_error": session.pop("outlook_error", None),
+        "outlook_success": session.pop("outlook_success", None),
     }
     context.update(extra)
     return context
@@ -79,7 +91,7 @@ def _avatar_initials(name: str | None) -> str:
 
 @auth_bp.route("/login", methods=["GET"])
 def login_form():
-    return render_template("login.html")
+    return render_template("login.html", hide_site_chrome=True)
 
 
 @auth_bp.route("/login", methods=["POST"])
@@ -92,7 +104,11 @@ def login():
         if request.is_json:
             return _json_error("Email and password are required.", 400)
 
-        return render_template("login.html", error="Please enter email and password.")
+        return render_template(
+            "login.html",
+            error="Please enter email and password.",
+            hide_site_chrome=True,
+        )
 
     user = User.query.filter_by(email=email).first()
     if user is None or not verify_password(password, user.password_hash):
@@ -100,7 +116,9 @@ def login():
             return _json_error("Invalid credentials.", 401)
 
         return render_template(
-            "login.html", error="Incorrect email or password. Please try again."
+            "login.html",
+            error="Incorrect email or password. Please try again.",
+            hide_site_chrome=True,
         )
 
     session["user_id"] = user.id
@@ -129,7 +147,7 @@ def oauth_callback():
         session.pop("oauth_state", None)
         if request.is_json:
             return _json_error(str(exc), 400)
-        return render_template("login.html", error=str(exc)), 400
+        return render_template("login.html", error=str(exc), hide_site_chrome=True), 400
 
     email = (user_info.get("email") or "").strip().lower()
     user = User.query.filter_by(email=email).first()
@@ -206,7 +224,7 @@ def gmail_callback():
 
 @auth_bp.route("/signup", methods=["GET"])
 def signup_form():
-    return render_template("signup.html")
+    return render_template("signup.html", hide_site_chrome=True)
 
 
 @auth_bp.route("/signup", methods=["POST"])
@@ -220,7 +238,11 @@ def signup():
         if request.is_json:
             return _json_error("Email and password are required.", 400)
 
-        return render_template("signup.html", error="Please enter email and password.")
+        return render_template(
+            "signup.html",
+            error="Please enter email and password.",
+            hide_site_chrome=True,
+        )
 
     existing = User.query.filter_by(email=email).first()
     if existing:
@@ -230,6 +252,7 @@ def signup():
         return render_template(
             "signup.html",
             error="This email is already registered. Please login instead.",
+            hide_site_chrome=True,
         )
 
     user = User(email=email, password_hash=hash_password(password))
@@ -380,4 +403,43 @@ def disconnect_gmail():
         return jsonify({"message": "Gmail disconnected."})
 
     session["gmail_success"] = "Gmail disconnected."
+    return redirect(_dashboard_url(page="settings", tab="channels"))
+
+
+@channel_bp.route("/outlook/connect", methods=["POST"])
+def connect_local_outlook():
+    user = _current_user()
+    if user is None:
+        return _json_error("Unauthorized.", 401)
+
+    try:
+        result = connect_outlook(user.id)
+    except Exception as exc:
+        if request.is_json:
+            return _json_error(str(exc), getattr(exc, "status_code", 409))
+        session["outlook_error"] = str(exc)
+        return redirect(_dashboard_url(page="settings", tab="channels"))
+
+    if request.is_json:
+        return jsonify(result)
+
+    session["outlook_success"] = "Outlook connected successfully."
+    return redirect(_dashboard_url(page="settings", tab="channels"))
+
+
+@channel_bp.route("/outlook", methods=["POST", "DELETE"])
+def disconnect_outlook():
+    user = _current_user()
+    if user is None:
+        return _json_error("Unauthorized.", 401)
+
+    outlook_token = _outlook_token_for_user(user.id)
+    if outlook_token is not None:
+        db.session.delete(outlook_token)
+        db.session.commit()
+
+    if request.method == "DELETE" or request.is_json:
+        return jsonify({"message": "Outlook disconnected."})
+
+    session["outlook_success"] = "Outlook disconnected."
     return redirect(_dashboard_url(page="settings", tab="channels"))

@@ -1,3 +1,117 @@
+{% macro dashboard_message_view() %}
+<!-- PAGE: VOICEMAIL VIEW -->
+<div id="page-voicemail" class="page-content">
+  <div class="inbox-toolbar">
+    <button class="back-btn" onclick="switchPage('dashboard')">
+      â† Back
+    </button>
+    <h1>Message</h1>
+  </div>
+
+  <div class="msgview-wrap">
+    <div class="summary-card">
+      <div>
+        <div class="summary-badge">AI Summary</div>
+        <h3>Alice Rodriguez</h3>
+        <div class="summary-text">
+          Alice is requesting feedback on the Q3 report by end of Friday.
+          Action required: review the attached document and reply with comments
+          before the deadline.
+        </div>
+      </div>
+      <button class="read-aloud-btn" onclick="showToast('â–¶ Reading aloudâ€¦')">
+        â–¶ Read aloud
+      </button>
+    </div>
+
+    <div class="message-card">
+      <div class="sender-row">
+        <div class="sender-av">AR</div>
+        <div class="sender-info">
+          <div class="sender-name">
+            Alice Rodriguez
+            <span class="msg-tag tag-email">Email</span>
+          </div>
+          <div class="sender-email">alice@company.com â†’ priya@company.com</div>
+        </div>
+        <div class="msg-timestamp">Today, 10:42 AM</div>
+      </div>
+
+      <div class="msg-subject-bar">Q3 Report Review â€” Feedback Needed</div>
+
+      <div class="msg-body-content">
+        <p>Hi Priya,</p>
+        <p>
+          Please find attached the Q3 summary report. I've highlighted the key
+          metrics and areas where I need your input before we present to the
+          board next Monday.
+        </p>
+        <p>
+          Specifically, I'd appreciate your review of the revenue forecast
+          assumptions in Section 3 and the risk matrix in Section 5. Your
+          expertise in those areas would be invaluable.
+        </p>
+        <p>
+          Could you please send me your feedback by EOD this Friday? This gives
+          us the weekend to incorporate comments before the final presentation.
+        </p>
+        <p>Best regards,<br />Alice</p>
+      </div>
+
+      <div class="msg-actions-row">
+        <button class="action-btn primary" onclick="switchPage('compose')">
+          â†© Reply
+        </button>
+        <button class="action-btn" onclick="switchPage('compose')">
+          â†ª Forward
+        </button>
+        <button class="action-btn" onclick="showToast('Archived')">
+          Archive
+        </button>
+        <button class="action-btn" onclick="showToast('Moved to trash')">
+          Delete
+        </button>
+      </div>
+    </div>
+
+    <div class="suggestions-card">
+      <div class="suggestions-header">
+        <div class="suggestions-title">AI-Suggested Replies</div>
+        <div class="ai-badge">AI</div>
+      </div>
+
+      <div class="suggestion-item">
+        <span
+          >Thanks Alice! I'll review Sections 3 and 5 and send you my feedback
+          by Friday EOD. Looking forward to the board presentation.</span
+        >
+        <button class="use-btn" onclick="switchPage('compose')">Use</button>
+      </div>
+
+      <div class="suggestion-item">
+        <span
+          >Hi Alice, got it! I have a few initial thoughts â€” let's schedule a
+          15-min call tomorrow to align before I put everything in writing?</span
+        >
+        <button class="use-btn" onclick="switchPage('compose')">Use</button>
+      </div>
+
+      <div class="suggestion-item">
+        <span
+          >Received, Alice. I'm slightly tied up until Thursday â€” would Thursday
+          evening work as the deadline instead of Friday?</span
+        >
+        <button class="use-btn" onclick="switchPage('compose')">Use</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endmacro %}
+
+{% if dashboard_embed|default(false) %}
+{{ dashboard_message_view() }}
+{% else %}
 {% extends 'base.html' %} {% block content %}
 <section class="message-view-page" data-message-id="{{ message_id }}">
   <div class="message-view-wrap">
@@ -130,3 +244,4 @@
   </div>
 </section>
 {% endblock %}
+{% endif %}

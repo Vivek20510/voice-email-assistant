@@ -1,4 +1,5 @@
 let inboxMessagesCache = [];
+const inboxMessagesCacheByChannel = {};
 let currentMessageId = null;
 let currentDashboardView = "sb-inbox";
 
@@ -17,7 +18,17 @@ const dashboardViewTitles = {
   "sb-promos": "Promotions",
 };
 
-const gmailViews = new Set(["sb-inbox", "sb-emails"]);
+const mailViews = new Set(["sb-inbox", "sb-emails", "sb-outlook"]);
+
+function channelForView(viewId) {
+  if (viewId === "sb-outlook") {
+    return "outlook";
+  }
+  if (viewId === "sb-emails") {
+    return "gmail";
+  }
+  return "all";
+}
 
 function setInboxContent(html) {
   const container = document.getElementById("inbox-content");
@@ -32,9 +43,14 @@ function setDashboardMessageMode(isMessageMode) {
   const aiPanel = document.getElementById("dashboard-ai-panel");
   const title = document.getElementById("dashboard-title");
   const toolbarActions = document.getElementById("dashboard-toolbar-actions");
+  const toolbar = document.getElementById("dashboard-toolbar");
 
   if (dashboardBody) {
     dashboardBody.classList.toggle("message-mode", isMessageMode);
+  }
+  if (toolbar) {
+    toolbar.hidden = isMessageMode;
+    toolbar.style.display = isMessageMode ? "none" : "";
   }
   if (aiPanel) {
     aiPanel.hidden = isMessageMode;
@@ -65,6 +81,18 @@ function setActiveSidebarItem(itemId) {
   });
 }
 
+function updateInboxUnreadBadge() {
+  const badge = document.getElementById("inbox-unread-badge");
+  if (!badge) {
+    return;
+  }
+
+  const messages = inboxMessagesCacheByChannel.all || inboxMessagesCache || [];
+  const unreadCount = messages.filter((message) => message.unread).length;
+  badge.textContent = String(unreadCount);
+  badge.hidden = unreadCount === 0;
+}
+
 function decodeHtmlEntities(value) {
   const textarea = document.createElement("textarea");
   textarea.innerHTML = String(value ?? "");
@@ -88,13 +116,13 @@ function formatMessageLabel(label) {
     "TRASH",
     "SPAM",
     "IMPORTANT",
+    "CATEGORY_UPDATES",
   ]);
   const friendlyLabels = {
     CATEGORY_FORUMS: "Forums",
     CATEGORY_PERSONAL: "Personal",
     CATEGORY_PROMOTIONS: "Promotions",
     CATEGORY_SOCIAL: "Social",
-    CATEGORY_UPDATES: "Updates",
     STARRED: "Starred",
   };
 
@@ -217,7 +245,10 @@ function getInboxGroupLabel(value) {
 function formatChannelName(channel) {
   const value = String(channel || "gmail").trim().toLowerCase();
   if (value === "gmail") {
-    return "Email";
+    return "Gmail";
+  }
+  if (value === "outlook") {
+    return "Outlook";
   }
 
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -228,7 +259,7 @@ function renderInboxLoading() {
   setInboxContent(`
     <div class="inbox-feedback" data-state="loading">
       <h3>Loading inbox...</h3>
-      <p>Fetching your latest Gmail messages.</p>
+      <p>Fetching your latest email messages.</p>
     </div>
   `);
 }
@@ -257,13 +288,14 @@ function renderEmptyView(viewId) {
   `);
 }
 
-function renderInboxNeedsConnect() {
+function renderInboxNeedsConnect(channel = "all") {
+  const serviceName = channel === "outlook" ? "Outlook" : channel === "gmail" ? "Gmail" : "Gmail or Outlook";
   setDashboardMessageMode(false);
   setInboxContent(`
     <div class="inbox-feedback" data-state="disconnected">
-      <h3>Connect Gmail to load your inbox</h3>
-      <p>Your dashboard will show live messages as soon as Gmail is connected.</p>
-      <a class="btn-save inbox-cta" href="/auth/settings">Open Gmail settings</a>
+      <h3>Connect ${escapeHtml(serviceName)} to load your inbox</h3>
+      <p>Your dashboard will show live messages as soon as a mail channel is connected.</p>
+      <a class="btn-save inbox-cta" href="/auth/settings">Open channel settings</a>
     </div>
   `);
 }
@@ -334,6 +366,14 @@ function markMessageRead(messageId) {
       ? { ...message, unread: false }
       : message
   );
+  Object.keys(inboxMessagesCacheByChannel).forEach((channel) => {
+    inboxMessagesCacheByChannel[channel] = inboxMessagesCacheByChannel[channel].map((message) =>
+      String(message.id) === String(messageId)
+        ? { ...message, unread: false }
+        : message
+    );
+  });
+  updateInboxUnreadBadge();
 }
 
 function getAvatarInitials(name) {
@@ -470,13 +510,16 @@ function renderMessageView(message) {
 
 function restoreInboxList() {
   currentMessageId = null;
-  if (!gmailViews.has(currentDashboardView)) {
+  if (!mailViews.has(currentDashboardView)) {
     renderEmptyView(currentDashboardView);
     return;
   }
 
-  if (inboxMessagesCache.length) {
-    renderInboxMessages(inboxMessagesCache);
+  const channel = channelForView(currentDashboardView);
+  const cachedMessages = inboxMessagesCacheByChannel[channel] || [];
+  if (cachedMessages.length) {
+    inboxMessagesCache = cachedMessages;
+    renderInboxMessages(cachedMessages);
     return;
   }
   loadInboxMessages();
@@ -512,13 +555,14 @@ async function loadMessageDetail(messageId) {
 }
 
 async function loadInboxMessages() {
-  currentDashboardView = gmailViews.has(currentDashboardView)
+  currentDashboardView = mailViews.has(currentDashboardView)
     ? currentDashboardView
     : "sb-inbox";
+  const channel = channelForView(currentDashboardView);
   renderInboxLoading();
 
   try {
-    const response = await fetch("/api/messages?limit=10", {
+    const response = await fetch(`/api/messages?limit=10&channel=${encodeURIComponent(channel)}`, {
       headers: { Accept: "application/json" },
       credentials: "same-origin",
     });
@@ -532,7 +576,7 @@ async function loadInboxMessages() {
 
     if (!response.ok) {
       if (response.status === 409) {
-        renderInboxNeedsConnect();
+        renderInboxNeedsConnect(channel);
         return;
       }
       renderInboxError(payload.error || "Unable to load your inbox.");
@@ -546,8 +590,10 @@ async function loadInboxMessages() {
         : [];
 
     inboxMessagesCache = messages;
+    inboxMessagesCacheByChannel[channel] = messages;
+    updateInboxUnreadBadge();
 
-    if (!gmailViews.has(currentDashboardView)) {
+    if (!mailViews.has(currentDashboardView)) {
       return;
     }
 
@@ -570,9 +616,12 @@ function switchSidebar(itemId) {
   currentDashboardView = itemId;
   setActiveSidebarItem(itemId);
 
-  if (gmailViews.has(itemId)) {
-    if (inboxMessagesCache.length) {
-      renderInboxMessages(inboxMessagesCache);
+  if (mailViews.has(itemId)) {
+    const channel = channelForView(itemId);
+    const cachedMessages = inboxMessagesCacheByChannel[channel] || [];
+    if (cachedMessages.length) {
+      inboxMessagesCache = cachedMessages;
+      renderInboxMessages(cachedMessages);
       return;
     }
 

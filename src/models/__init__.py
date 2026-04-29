@@ -114,3 +114,26 @@ class EmailMessage(db.Model):
 
     def __repr__(self):
         return f"<EmailMessage id={self.id} user_id={self.user_id}>"
+
+
+class ReadMessage(db.Model):
+    """Messages the user has marked as read inside this app."""
+
+    __tablename__ = "read_messages"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "channel", "message_id", name="uq_read_message"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    channel = db.Column(db.String(64), nullable=False)
+    message_id = db.Column(db.String(512), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship("User")
+
+    def __repr__(self):
+        return (
+            f"<ReadMessage id={self.id} user_id={self.user_id} "
+            f"channel={self.channel} message_id={self.message_id}>"
+        )

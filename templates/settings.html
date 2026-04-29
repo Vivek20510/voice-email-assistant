@@ -1,3 +1,315 @@
+{% macro dashboard_settings() %}
+<!-- PAGE: SETTINGS -->
+<div id="page-settings" class="page-content">
+  <div class="settings-layout">
+    <div class="settings-nav">
+      <div class="settings-nav-header">Settings</div>
+
+      <div
+        class="settings-nav-item active"
+        onclick="switchSettingsTab(this, 'spanel-profile')"
+      >
+        ðŸ‘¤ Profile
+      </div>
+
+      <div
+        class="settings-nav-item"
+        onclick="switchSettingsTab(this, 'spanel-voice')"
+      >
+        ðŸŽ™ Voice Assistant
+      </div>
+
+      <div
+        class="settings-nav-item"
+        onclick="switchSettingsTab(this, 'spanel-notifications')"
+      >
+        ðŸ”” Notifications
+      </div>
+
+      <div
+        class="settings-nav-item"
+        onclick="switchSettingsTab(this, 'spanel-channels')"
+      >
+        âš¡ Channels
+      </div>
+
+      <div
+        class="settings-nav-item"
+        onclick="switchSettingsTab(this, 'spanel-security')"
+      >
+        ðŸ”’ Privacy &amp; Security
+      </div>
+
+      <div
+        class="settings-nav-item"
+        onclick="switchSettingsTab(this, 'spanel-appearance')"
+      >
+        ðŸŽ¨ Appearance
+      </div>
+
+      <div class="settings-nav-spacer"></div>
+
+      <div class="settings-nav-footer">
+        <button class="btn-logout" onclick="confirmLogout()">
+          â†’ Sign Out
+        </button>
+      </div>
+    </div>
+
+    <div class="settings-content">
+      <!-- PROFILE TAB -->
+      <div id="spanel-profile" class="settings-section active">
+        <div class="profile-content">
+          <div class="settings-section-title">Profile Settings</div>
+          <div class="settings-section-desc">
+            Manage your personal information and account details.
+          </div>
+
+          <div class="settings-card">
+            <div class="profile-header">
+              <div class="profile-left">
+                <img
+                  id="profilePhoto"
+                  class="profile-avatar-lg"
+                  src="{{ user.profile_photo or url_for('static', filename='img/default-avatar.png') }}"
+                  alt="Profile Photo"
+                />
+
+                <div class="profile-info">
+                  <div class="profile-name">{{ user.name }}</div>
+                  <div class="profile-email">{{ user.email }}</div>
+                </div>
+              </div>
+
+              <div class="profile-actions">
+                <button class="btn-change-photo" onclick="openPhotoPicker()">
+                  Change Photo
+                </button>
+              </div>
+
+              <input
+                type="file"
+                id="photoInput"
+                accept="image/*"
+                hidden
+                onchange="loadPhoto(event)"
+              />
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-row-left">
+                <div class="settings-row-label">Display Name</div>
+                <div class="settings-row-desc">How your name appears to others</div>
+              </div>
+              <input
+                type="text"
+                class="settings-input-sm"
+                value="Priya Sharma"
+              />
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-row-left">
+                <div class="settings-row-label">Email Address</div>
+                <div class="settings-row-desc">
+                  This email is used for login and cannot be changed
+                </div>
+              </div>
+
+              <div class="settings-value-readonly">{{ user.email }}</div>
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-row-left">
+                <div class="settings-row-label">Phone Number</div>
+                <div class="settings-row-desc">Used for WhatsApp and SMS</div>
+              </div>
+              <input
+                type="text"
+                class="settings-input-sm"
+                value="+91 98765 43210"
+              />
+            </div>
+
+            <div class="settings-row">
+              <div class="settings-row-left">
+                <div class="settings-row-label">Time Zone</div>
+                <div class="settings-row-desc">For scheduling and timestamps</div>
+              </div>
+              <select class="settings-select-sm">
+                <option>IST (UTC+5:30)</option>
+                <option>UTC</option>
+                <option>PST</option>
+                <option>EST</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="settings-save-row">
+            <button class="btn-save">Save Changes</button>
+            <button class="btn-cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- OTHER TABS (REQUIRED) -->
+      <div id="spanel-voice" class="settings-section">Voice settings</div>
+      <div id="spanel-notifications" class="settings-section">
+        Notification settings
+      </div>
+      <!-- Channels Section -->
+      <div id="spanel-channels" class="settings-section">
+        <div class="settings-section-title">Connected Channels</div>
+        <div class="settings-section-desc">
+          Manage your messaging integrations.
+        </div>
+        {% if gmail_error or outlook_error %}
+        <div class="settings-card" role="alert">
+          <div class="settings-row">
+            <div class="settings-row-left">
+              <div class="settings-row-label">
+                {% if gmail_error %}Gmail connection failed{% else %}Outlook
+                connection failed{% endif %}
+              </div>
+              <div class="settings-row-desc">
+                {{ gmail_error or outlook_error }}
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %} {% if gmail_success or outlook_success %}
+        <div class="settings-card" role="status">
+          <div class="settings-row">
+            <div class="settings-row-left">
+              <div class="settings-row-label">Channel update</div>
+              <div class="settings-row-desc">
+                {{ gmail_success or outlook_success }}
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="settings-card">
+          <!-- Gmail -->
+          <div class="settings-row">
+            <div class="settings-row-left">
+              <div class="settings-row-label">ðŸ“§ Gmail</div>
+
+              {% if gmail_connected %}
+              <div class="settings-row-desc">
+                {{ gmail_email if gmail_email else 'Connected' }}
+              </div>
+              {% else %}
+              <div class="settings-row-desc">Not connected</div>
+              {% endif %}
+            </div>
+
+            {% if gmail_connected %}
+            <form
+              method="post"
+              action="{{ url_for('channels.disconnect_gmail') }}"
+              class="channel-action-form"
+            >
+              <button
+                type="submit"
+                class="channel-connect-btn btn-cancel"
+                aria-label="Disconnect Gmail"
+              >
+                Disconnect
+              </button>
+            </form>
+            {% else %}
+            <a
+              href="{{ url_for('auth.gmail_connect', next='settings') }}"
+              class="channel-connect-btn btn-save"
+              aria-label="Connect Gmail"
+            >
+              Connect
+            </a>
+            {% endif %}
+          </div>
+
+          <!-- WhatsApp -->
+          <div class="settings-row">
+            <div class="settings-row-left">
+              <div class="settings-row-label">ðŸ’¬ WhatsApp</div>
+              <div class="settings-row-desc">Not connected</div>
+            </div>
+
+            <button
+              class="channel-connect-btn btn-save"
+              onclick="showToast('Connecting WhatsApp...')"
+            >
+              Connect
+            </button>
+          </div>
+
+          <!-- Telegram -->
+          <div class="settings-row">
+            <div class="settings-row-left">
+              <div class="settings-row-label">âœˆ Telegram</div>
+              <div class="settings-row-desc">Not connected</div>
+            </div>
+
+            <button
+              class="channel-connect-btn btn-save"
+              onclick="showToast('Connecting Telegram...')"
+            >
+              Connect
+            </button>
+          </div>
+
+          <!-- Outlook -->
+          <div class="settings-row">
+            <div class="settings-row-left">
+              <div class="settings-row-label">ðŸ“® Outlook</div>
+              {% if outlook_connected %}
+              <div class="settings-row-desc">
+                {{ outlook_email if outlook_email else 'Connected locally' }}
+              </div>
+              {% else %}
+              <div class="settings-row-desc">Not connected</div>
+              {% endif %}
+            </div>
+
+            {% if outlook_connected %}
+            <form
+              method="post"
+              action="{{ url_for('channels.disconnect_outlook') }}"
+              class="channel-action-form"
+            >
+              <button type="submit" class="channel-connect-btn btn-cancel">
+                Disconnect
+              </button>
+            </form>
+            {% else %}
+            <form
+              method="post"
+              action="{{ url_for('channels.connect_local_outlook') }}"
+              class="channel-action-form"
+            >
+              <button type="submit" class="channel-connect-btn btn-save">
+                Connect Outlook
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div id="spanel-security" class="settings-section">Security settings</div>
+      <div id="spanel-appearance" class="settings-section">
+        Appearance settings
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endmacro %}
+
+{% if dashboard_embed|default(false) %}
+{{ dashboard_settings() }}
+{% else %}
 {% extends 'base.html' %}
 
 {% block content %}
@@ -39,3 +351,4 @@
         </div>
     </section>
 {% endblock %}
+{% endif %}

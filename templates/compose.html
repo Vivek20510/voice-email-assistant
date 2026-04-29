@@ -1,3 +1,43 @@
+{% macro dashboard_compose() %}
+<!-- PAGE: COMPOSE -->
+<div id="page-compose" class="page-content">
+  <div class="compose-wrap">
+    <div class="compose-title-bar">
+      <button class="tool-btn" onclick="switchPage('dashboard')">
+        â† Back
+      </button>
+      <h2>New Message</h2>
+    </div>
+
+    <div class="compose-card">
+      <input
+        type="text"
+        class="ai-search-input"
+        placeholder="To"
+        style="margin-bottom: 15px"
+      />
+      <input
+        type="text"
+        class="ai-search-input"
+        placeholder="Subject"
+        style="margin-bottom: 15px"
+      />
+      <textarea
+        class="ai-search-input"
+        rows="8"
+        placeholder="Write your message..."
+        style="margin-bottom: 15px"
+      ></textarea>
+      <button class="sidebar-compose">Send â†‘</button>
+    </div>
+  </div>
+</div>
+
+{% endmacro %}
+
+{% if dashboard_embed|default(false) %}
+{{ dashboard_compose() }}
+{% else %}
 {% extends 'base.html' %}
 
 {% block content %}
@@ -39,3 +79,4 @@
         </div>
     </section>
 {% endblock %}
+{% endif %}
