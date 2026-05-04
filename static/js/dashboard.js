@@ -208,8 +208,16 @@ function renderMessageView(message) {
             <div>
               <div class="summary-badge message-detail-summary-badge">✦ AI Summary</div>
               <h3 class="message-detail-summary-sender">${escapeHtml(sender)}</h3>
-              <div id="summary-text" class="summary-text message-detail-summary-text">
-                AI summary will appear here once this feature is wired.
+              <div
+                id="summary-text"
+                class="summary-text message-detail-summary-text"
+                data-state="loading"
+                data-summary-url="/nlp/summarize"
+                data-subject="${escapeHtml(subject)}"
+                data-sender="${escapeHtml(sender)}"
+                data-body="${escapeHtml(bodyText || bodyHtml)}"
+              >
+                Generating summary...
               </div>
             </div>
             <button id="read-aloud-btn" type="button" class="read-aloud-btn message-detail-ghost-btn">▶ Read aloud</button>
@@ -258,6 +266,16 @@ function renderMessageView(message) {
       </div>
     </section>
   `);
+
+  const summaryEl = document.getElementById("summary-text");
+  if (window.EmailSummary && summaryEl) {
+    window.EmailSummary.load(summaryEl);
+  } else if (summaryEl) {
+    summaryEl.dataset.state = "error";
+    summaryEl.textContent =
+      "Summary is temporarily unavailable. Please review the message body below.";
+    console.warn("Email summary loader is not available.");
+  }
 }
 
 function restoreInboxList() {

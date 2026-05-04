@@ -12,11 +12,19 @@
         <div>
           <div class="summary-badge message-detail-summary-badge">✦ AI Summary</div>
           <h3 class="message-detail-summary-sender">{{ message.sender }}</h3>
-          <div id="summary-text" class="summary-text message-detail-summary-text">
+          <div
+            id="summary-text"
+            class="summary-text message-detail-summary-text"
+            data-state="{{ 'ready' if summary else 'loading' }}"
+            data-summary-url="{{ url_for('nlp.summarize') }}"
+            data-subject="{{ message.subject }}"
+            data-sender="{{ message.sender }}"
+            data-body="{{ message.body_text or message.body_html or '' }}"
+          >
             {% if summary %}
               {{ summary }}
             {% else %}
-              AI summary will appear here once the summary API is wired.
+              Generating summary...
             {% endif %}
           </div>
         </div>

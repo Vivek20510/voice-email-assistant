@@ -369,6 +369,10 @@ def test_dashboard_contains_inbox_and_settings_bootstrap_state(client):
     assert b'id="dashboard-ai-panel"' in response.data
     assert b"Loading inbox..." in response.data
     assert b"Connect Gmail" in response.data
+    assert b"js/message_summary.js" in response.data
+    assert response.data.find(b"js/message_summary.js") < response.data.find(
+        b"js/dashboard.js"
+    )
 
 
 def test_message_view_requires_login(client):
@@ -392,6 +396,10 @@ def test_message_view_renders_placeholder_content(client):
     assert b"AI Summary" in response.data
     assert b"AI-Suggested Replies" in response.data
     assert b'id="summary-text"' in response.data
+    assert b'data-summary-url="/nlp/summarize"' in response.data
+    assert b'data-subject="Q3 Report Review - Feedback Needed"' in response.data
+    assert b'data-sender="Alice Rodriguez"' in response.data
+    assert b"data-body=" in response.data
     assert b'id="read-aloud-btn"' in response.data
     assert b'id="message-body"' in response.data
     assert b'id="reply-btn"' in response.data
@@ -405,3 +413,7 @@ def test_message_view_renders_placeholder_content(client):
         b"/auth/dashboard?page=dashboard&amp;folder=inbox&amp;channel=gmail"
         in response.data
     )
+    assert b"message_summary.js" in response.data
+    assert b"|tojson" not in response.data
+    assert b"{{" not in response.data
+    assert b'fetch("/nlp/summarize"' not in response.data
