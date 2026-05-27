@@ -1,41 +1,259 @@
-{% extends 'base.html' %}
+{% macro dashboard_compose() %}
 
-{% block content %}
-    <section class="compose-panel">
-        <h1>Compose Message</h1>
-        <form class="compose-form">
-            <div class="form-row">
-                <label for="service">Service</label>
-                <select id="service" name="service">
-                    <option value="gmail">Gmail</option>
-                    <option value="telegram">Telegram</option>
-                </select>
-            </div>
-            <div class="form-row">
-                <label for="recipient">Recipient</label>
-                <input id="recipient" name="recipient" type="text" placeholder="Email or Telegram handle" />
-            </div>
-            <div class="form-row">
-                <label for="subject">Subject</label>
-                <input id="subject" name="subject" type="text" placeholder="Subject (Gmail only)" />
-            </div>
-            <div class="form-row">
-                <label for="message">Message</label>
-                <textarea id="message" name="message" rows="6" placeholder="Write your message here..."></textarea>
-            </div>
-            <button type="button">Send</button>
-        </form>
+<!-- PAGE: COMPOSE -->
 
-        <div class="voice-panel">
-            <h2>Voice Dictation</h2>
-            <div class="voice-controls">
-                <button type="button">Record</button>
-                <button type="button">Stop</button>
-            </div>
-            <div class="voice-preview">
-                <h3>Transcription Preview</h3>
-                <p>No transcription available yet.</p>
-            </div>
-        </div>
+<div id="page-compose" class="page-content">
+  <div class="compose-wrap">
+    <div class="compose-title-bar">
+      <button class="tool-btn" onclick="switchPage('dashboard')">← Back</button>
+
+      <h1>Compose</h1>
+    </div>
+
+    <section class="compose-channel" aria-label="Send via">
+      <label class="compose-field-label" for="compose-channel">Send via</label>
+
+      <div class="compose-select-wrap">
+        <svg class="compose-select-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 6.5h16v11H4z" />
+
+          <path d="m4 7 8 6 8-6" />
+        </svg>
+
+        <select id="compose-channel" name="channel" class="compose-select">
+          <option value="outlook">Outlook</option>
+
+          <option value="whatsapp">Whatsapp</option>
+
+          <option value="telegram">Telegram</option>
+
+          <option value="gmail">Email</option>
+        </select>
+
+        <svg class="compose-caret" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m7 10 5 5 5-5" />
+        </svg>
+      </div>
     </section>
-{% endblock %}
+
+    <section class="compose-card" aria-label="Message details">
+      <div class="compose-field">
+        <label class="compose-field-label" for="compose-to">To</label>
+
+        <input
+          id="compose-to"
+          name="to"
+          class="compose-input"
+          type="text"
+          autocomplete="email"
+          placeholder="Add recipient or email..."
+        />
+
+        <span class="error-text" id="to-error"></span>
+      </div>
+
+      <div class="compose-field">
+        <label class="compose-field-label" for="compose-subject">Subject</label>
+
+        <input
+          id="compose-subject"
+          name="subject"
+          class="compose-input"
+          type="text"
+          placeholder="Add a subject..."
+        />
+      </div>
+
+      <div class="compose-field compose-message-field">
+        <label class="compose-field-label" for="compose-message">Message</label>
+
+        <textarea
+          id="compose-message"
+          name="body"
+          class="compose-textarea"
+          maxlength="2000"
+          placeholder="Write your message..."
+          oninput="updateComposeCount()"
+        ></textarea>
+
+        <span class="error-text" id="message-error"></span>
+      </div>
+
+      <div class="compose-card-footer">
+        <div class="compose-count">
+          <span id="compose-count">0</span>
+
+          <span>/</span>
+
+          <span>2000</span>
+        </div>
+
+        <div class="compose-tools">
+          <button
+            type="button"
+            class="compose-soft-btn"
+            onclick="handleAiWrite()"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7z"
+              />
+            </svg>
+
+            <span>AI Write</span>
+          </button>
+
+          <button
+            type="button"
+            class="compose-soft-btn"
+            onclick="document.getElementById('compose-attachment').click()"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M9 12.5 15.5 6a3.2 3.2 0 0 1 4.5 4.5l-8.4 8.4a5 5 0 0 1-7.1-7.1l8.1-8.1"
+              />
+            </svg>
+
+            <span>Attach</span>
+          </button>
+
+          <input id="compose-attachment" type="file" hidden />
+        </div>
+      </div>
+    </section>
+
+    <footer class="compose-actions">
+      <label class="compose-schedule" for="compose-schedule">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="8.5" />
+
+          <path d="M12 7.5v5l3.5 2" />
+        </svg>
+
+        <span>
+          <span class="compose-schedule-label">When to send</span>
+
+          <select
+            id="compose-schedule"
+            name="schedule"
+            class="compose-schedule-select"
+          >
+            <option value="now">Send now</option>
+
+            <option value="in_1_hour">In 1 hour</option>
+
+            <option value="tomorrow_9am">Tomorrow 9 AM</option>
+
+            <option value="custom">Custom</option>
+          </select>
+        </span>
+
+        <svg class="compose-caret" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m7 10 5 5 5-5" />
+        </svg>
+      </label>
+
+      <div class="compose-final-actions">
+        <button
+          type="button"
+          class="compose-draft-btn"
+          onclick="saveComposeDraft()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 4.5h10v15l-5-3-5 3z" />
+          </svg>
+
+          <span>Save as Draft</span>
+        </button>
+
+        <button
+          type="button"
+          class="compose-send-btn"
+          onclick="sendComposeMessage()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m21 3-8.8 18-2.2-8-7-3z" />
+
+            <path d="m21 3-11 10" />
+          </svg>
+
+          <span>Send</span>
+        </button>
+      </div>
+    </footer>
+  </div>
+
+  {% endmacro %} {% if dashboard_embed|default(false) %} {{ dashboard_compose()
+  }} {% else %} {% extends 'base.html' %} {% block extra_css %}
+  <link rel="stylesheet" href="/static/css/compose.css?v=theme-20260521" />
+  {% endblock %} {% block content %}
+
+  <section class="compose-panel">
+    <h1>Compose Message</h1>
+
+    <form class="compose-form">
+      <div class="form-row">
+        <label for="service">Service</label>
+
+        <select id="service" name="service">
+          <option value="gmail">Gmail</option>
+
+          <option value="telegram">Telegram</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label for="recipient">Recipient</label>
+
+        <input
+          id="recipient"
+          name="recipient"
+          type="text"
+          placeholder="Email or Telegram handle"
+        />
+      </div>
+
+      <div class="form-row">
+        <label for="subject">Subject</label>
+
+        <input
+          id="subject"
+          name="subject"
+          type="text"
+          placeholder="Subject (Gmail only)"
+        />
+      </div>
+
+      <div class="form-row">
+        <label for="message">Message</label>
+
+        <textarea
+          id="message"
+          name="message"
+          rows="6"
+          placeholder="Write your message here..."
+        ></textarea>
+      </div>
+
+      <button type="button">Send</button>
+    </form>
+
+    <div class="voice-panel">
+      <h2>Voice Dictation</h2>
+
+      <div class="voice-controls">
+        <button type="button">Record</button>
+
+        <button type="button">Stop</button>
+      </div>
+
+      <div class="voice-preview">
+        <h3>Transcription Preview</h3>
+
+        <p>No transcription available yet.</p>
+      </div>
+    </div>
+  </section>
+
+  {% endblock %} {% endif %}
+</div>

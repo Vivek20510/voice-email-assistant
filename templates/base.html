@@ -1,42 +1,70 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!doctype html>
+
+<html lang="en" data-theme="{{ theme_preference|default('system') }}">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <title>Voice Email Assistant</title>
-    <link rel="stylesheet" href="/static/css/style.css">
-</head>
-<body>
 
-<header class="site-header">
-    <div class="container header-wrap">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
 
+    <script>
+      (function () {
+        var theme = "{{ theme_preference|default('system') }}";
+        document.documentElement.dataset.theme = theme || "system";
+      })();
+    </script>
+
+    <link rel="stylesheet" href="/static/css/style.css?v=theme-20260521" />
+
+    <link rel="stylesheet" href="/static/css/base.css?v=theme-20260521" />
+
+    {% block extra_css %}{% endblock %}
+  </head>
+
+  <body>
+    {% if not hide_site_chrome %}
+
+    <header class="site-header">
+      <div class="container header-wrap">
         <!-- Empty Left Space -->
+
         <div></div>
 
         <!-- Show only after login -->
+
         <nav class="site-nav">
-            {% if session.get('user_id') %}
-                <a href="/auth/dashboard">Dashboard</a>
-                <a href="/auth/compose">Compose</a>
-                <a href="/auth/settings">Settings</a>
-                <a href="/auth/logout">Logout</a>
-            {% endif %}
+          {% if session.get('user_id') %}
+
+          <a href="/auth/dashboard">Dashboard</a>
+
+          <a href="/auth/compose">Compose</a>
+
+          <a href="/auth/settings">Settings</a>
+
+          <a href="/auth/logout">Logout</a>
+
+          {% endif %}
         </nav>
+      </div>
+    </header>
 
-    </div>
-</header>
+    {% endif %}
 
-<main class="main-content">
-    {% block content %}{% endblock %}
-</main>
+    <main class="main-content">{% block content %}{% endblock %}</main>
 
-<footer class="site-footer">
-    <div class="container">
+    {% if not hide_site_chrome %}
+
+    <footer class="site-footer">
+      <div class="container">
         <p>Voice Email Assistant &copy; 2026</p>
-    </div>
-</footer>
+      </div>
+    </footer>
 
-<script src="{{ url_for('static', filename='js/message_summary.js') }}"></script>
-</body>
+    {% endif %}
+
+    <script src="/static/js/app.js" defer></script>
+  </body>
 </html>

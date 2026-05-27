@@ -1,41 +1,1145 @@
+{% macro dashboard_settings() %}
+
+<!-- PAGE: SETTINGS -->
+
+<div id="page-settings" class="page-content">
+
+  <div class="settings-layout">
+
+    <div class="settings-nav">
+
+      <div class="settings-nav-header">Settings</div>
+
+
+ 
+
+      <div class="settings-nav-item active" onclick="switchSettingsTab(this, 'spanel-profile')">
+
+        👤 Profile
+
+      </div>
+
+
+ 
+
+      <div class="settings-nav-item" onclick="switchSettingsTab(this, 'spanel-voice')">
+
+        🎙 Voice Assistant
+
+      </div>
+
+
+ 
+
+      <div class="settings-nav-item" onclick="switchSettingsTab(this, 'spanel-notifications')">
+
+        🔔 Notifications
+
+      </div>
+
+
+ 
+
+      <div class="settings-nav-item" onclick="switchSettingsTab(this, 'spanel-channels')">
+
+        ⚡ Channels
+
+      </div>
+
+
+ 
+
+      <div class="settings-nav-item" onclick="switchSettingsTab(this, 'spanel-security')">
+
+        🔒 Privacy &amp; Security
+
+      </div>
+
+
+ 
+
+      <div class="settings-nav-item" onclick="switchSettingsTab(this, 'spanel-appearance')">
+
+        🎨 Appearance
+
+      </div>
+
+
+ 
+
+      <div class="settings-nav-item" onclick="switchSettingsTab(this, 'spanel-language')">
+
+        🔤 Language
+
+      </div>
+
+
+ 
+
+      <div class="settings-nav-spacer"></div>
+
+
+ 
+
+      <div class="settings-nav-footer">
+
+        <button class="btn-logout" onclick="confirmLogout()">
+
+          ⟶ Sign Out
+
+        </button>
+
+      </div>
+
+    </div>
+
+
+ 
+
+    <div class="settings-content">
+
+      <!-- PROFILE TAB -->
+
+      <div id="spanel-profile" class="settings-section active">
+
+        <div class="profile-content">
+
+          <div class="settings-section-title">Profile Settings</div>
+
+          <div class="settings-section-desc">
+
+            Manage your personal information and account details.
+
+          </div>
+
+
+ 
+
+          <div class="settings-card">
+
+            <div class="profile-header">
+
+              <div class="profile-left">
+
+                <img id="profilePhoto" class="profile-avatar-lg"
+
+                  src="{{ user.profile_photo or url_for('static', filename='img/default-avatar.svg') }}"
+
+                  alt="Profile Photo" />
+
+
+ 
+
+                <div class="profile-info">
+
+                  <div class="profile-name">{{ user.name }}</div>
+
+                  <div class="profile-email">{{ user.email }}</div>
+
+                </div>
+
+              </div>
+
+
+ 
+
+              <div class="profile-actions">
+
+                <button class="btn-change-photo" onclick="openPhotoPicker()">
+
+                  Change Photo
+
+                </button>
+
+              </div>
+
+
+ 
+
+              <input type="file" id="photoInput" accept="image/*" hidden onchange="loadPhoto(event)" />
+
+            </div>
+
+
+ 
+
+            <div class="settings-row">
+
+              <div class="settings-row-left">
+
+                <div class="settings-row-label">Display Name</div>
+
+                <div class="settings-row-desc">How your name appears to others</div>
+
+              </div>
+
+              <input id="settings-display-name" type="text" class="settings-input-sm"
+                value="{{ settings.display_name|default(user.name) }}" />
+
+            </div>
+
+
+ 
+
+            <div class="settings-row">
+
+              <div class="settings-row-left">
+
+                <div class="settings-row-label">Email Address</div>
+
+                <div class="settings-row-desc">
+
+                  This email is used for login and cannot be changed
+
+                </div>
+
+              </div>
+
+
+ 
+
+              <div class="settings-value-readonly">{{ user.email }}</div>
+
+            </div>
+
+
+ 
+
+            <div class="settings-row">
+
+              <div class="settings-row-left">
+
+                <div class="settings-row-label">Phone Number</div>
+
+                <div class="settings-row-desc">Used for WhatsApp and SMS</div>
+
+              </div>
+
+              <input id="settings-phone-number" type="text" class="settings-input-sm"
+                value="{{ settings.phone_number|default('') }}" />
+
+            </div>
+
+
+ 
+
+            <div class="settings-row">
+
+              <div class="settings-row-left">
+
+                <div class="settings-row-label">Time Zone</div>
+
+                <div class="settings-row-desc">For scheduling and timestamps</div>
+
+              </div>
+
+              <select id="settings-timezone" class="settings-select-sm">
+
+                <option value="IST (UTC+5:30)" {% if settings.timezone|default('IST (UTC+5:30)') == 'IST (UTC+5:30)' %}selected{% endif %}>IST (UTC+5:30)</option>
+
+                <option value="UTC" {% if settings.timezone|default('IST (UTC+5:30)') == 'UTC' %}selected{% endif %}>UTC</option>
+
+                <option value="PST" {% if settings.timezone|default('IST (UTC+5:30)') == 'PST' %}selected{% endif %}>PST</option>
+
+                <option value="EST" {% if settings.timezone|default('IST (UTC+5:30)') == 'EST' %}selected{% endif %}>EST</option>
+
+              </select>
+
+            </div>
+
+          </div>
+
+
+ 
+
+          <div class="settings-save-row">
+
+            <button class="btn-save" onclick="saveProfileSettings()">Save Changes</button>
+
+            <button class="btn-cancel">Cancel</button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+ 
+
+      <!-- Voice Tab -->
+
+      <div id="spanel-voice" class="settings-section hidden">
+
+        <div class="settings-section-title">Voice Assistant</div>
+
+        <div class="settings-section-desc">Configure your AI-powered voice and reply assistant.</div>
+
+        <div class="voice-setup-card">
+
+          <div class="voice-hero">
+
+            <div class="voice-hero-icon">🎙</div>
+
+            <div class="voice-hero-text">
+
+              <h3>Voice Assistant Active</h3>
+
+              <p>Your AI assistant is ready to help</p>
+
+            </div>
+
+            <div class="voice-status-pill">● Live</div>
+
+          </div>
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">Auto-reply suggestions</div>
+
+              <div class="settings-row-desc">Show AI-generated reply drafts</div>
+
+            </div>
+
+            <label class="toggle"><input id="settings-auto-reply" type="checkbox" {% if settings.auto_reply_enabled|default(true) %}checked{% endif %}><span class="toggle-slider"></span></label>
+
+          </div>
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">Voice tone</div>
+
+              <div class="settings-row-desc">Style for AI-generated replies</div>
+
+            </div>
+
+            <select id="settings-voice-tone" class="settings-select-sm">
+
+              <option value="professional" {% if settings.voice_tone|default('professional') == 'professional' %}selected{% endif %}>Professional</option>
+
+              <option value="friendly" {% if settings.voice_tone|default('professional') == 'friendly' %}selected{% endif %}>Friendly</option>
+
+              <option value="concise" {% if settings.voice_tone|default('professional') == 'concise' %}selected{% endif %}>Concise</option>
+
+              <option value="formal" {% if settings.voice_tone|default('professional') == 'formal' %}selected{% endif %}>Formal</option>
+
+            </select>
+
+          </div>
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">Auto-summarise messages</div>
+
+              <div class="settings-row-desc">Generate a short summary for each email</div>
+
+            </div>
+
+            <label class="toggle"><input id="settings-auto-summarize" type="checkbox" {% if settings.auto_summarize_enabled|default(true) %}checked{% endif %}><span class="toggle-slider"></span></label>
+
+          </div>
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">Read aloud speed</div>
+
+              <div class="settings-row-desc">Speed for text-to-speech playback</div>
+
+            </div>
+
+            <select id="settings-read-speed" class="settings-select-sm">
+
+              <option value="normal" {% if settings.read_aloud_speed|default('normal') == 'normal' %}selected{% endif %}>Normal (1×)</option>
+
+              <option value="fast" {% if settings.read_aloud_speed|default('normal') == 'fast' %}selected{% endif %}>Fast (1.5×)</option>
+
+              <option value="slow" {% if settings.read_aloud_speed|default('normal') == 'slow' %}selected{% endif %}>Slow (0.75×)</option>
+
+            </select>
+
+          </div>
+
+        </div>
+
+        <div class="settings-save-row">
+
+          <button class="btn-save" onclick="saveVoiceSettings()">Save Changes</button>
+
+          <button class="btn-cancel">Cancel</button>
+
+        </div>
+
+      </div>
+
+
+ 
+
+      <!-- Notifications Tab -->
+
+      <div id="spanel-notifications" class="settings-section hidden">
+
+        <div class="settings-section-title">Notifications</div>
+
+        <div class="settings-section-desc">Control how and when you receive alerts.</div>
+
+        <div class="settings-card">
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">Email notifications</div>
+
+              <div class="settings-row-desc">Alerts for new email messages</div>
+
+            </div>
+
+            <label class="toggle"><input id="settings-email-notifications" type="checkbox" {% if settings.email_notifications|default(true) %}checked{% endif %}><span class="toggle-slider"></span></label>
+
+          </div>
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">WhatsApp notifications</div>
+
+              <div class="settings-row-desc">Alerts for new WhatsApp messages</div>
+
+            </div>
+
+            <label class="toggle"><input id="settings-whatsapp-notifications" type="checkbox" {% if settings.whatsapp_notifications|default(true) %}checked{% endif %}><span class="toggle-slider"></span></label>
+
+          </div>
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">Telegram notifications</div>
+
+              <div class="settings-row-desc">Alerts for new Telegram messages</div>
+
+            </div>
+
+            <label class="toggle"><input id="settings-telegram-notifications" type="checkbox" {% if settings.telegram_notifications|default(false) %}checked{% endif %}><span class="toggle-slider"></span></label>
+
+          </div>
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">Desktop push notifications</div>
+
+              <div class="settings-row-desc">Show browser notifications when tab is inactive</div>
+
+            </div>
+
+            <label class="toggle"><input id="settings-desktop-notifications" type="checkbox" {% if settings.desktop_notifications|default(true) %}checked{% endif %}><span class="toggle-slider"></span></label>
+
+          </div>
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">Notification sound</div>
+
+              <div class="settings-row-desc">Play sound for new messages</div>
+
+            </div>
+
+            <label class="toggle"><input id="settings-notification-sound" type="checkbox" {% if settings.notification_sound|default(false) %}checked{% endif %}><span class="toggle-slider"></span></label>
+
+          </div>
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">Do Not Disturb schedule</div>
+
+              <div class="settings-row-desc">Silence notifications outside working hours</div>
+
+            </div>
+
+            <select id="settings-do-not-disturb" class="settings-select-sm">
+
+              <option value="off" {% if settings.do_not_disturb|default('off') == 'off' %}selected{% endif %}>Off</option>
+
+              <option value="work_hours" {% if settings.do_not_disturb|default('off') == 'work_hours' %}selected{% endif %}>9am - 6pm</option>
+
+              <option value="extended" {% if settings.do_not_disturb|default('off') == 'extended' %}selected{% endif %}>8am - 8pm</option>
+
+              <option value="custom" {% if settings.do_not_disturb|default('off') == 'custom' %}selected{% endif %}>Custom</option>
+
+            </select>
+
+          </div>
+
+        </div>
+
+        <div class="settings-save-row">
+
+          <button class="btn-save" onclick="saveNotificationSettings()">Save Changes</button>
+
+          <button class="btn-cancel">Cancel</button>
+
+        </div>
+
+      </div>
+
+      <!-- Channels Tab -->
+
+      <div id="spanel-channels" class="settings-section">
+
+        <div class="settings-section-title">Connected Channels</div>
+
+        <div class="settings-section-desc">
+
+          Manage your messaging integrations.
+
+        </div>
+
+        {% if gmail_error or outlook_error %}
+
+        <div class="settings-card" role="alert">
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">
+
+                {% if gmail_error %}Gmail connection failed{% else %}Outlook
+
+                connection failed{% endif %}
+
+              </div>
+
+              <div class="settings-row-desc">
+
+                {{ gmail_error or outlook_error }}
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        {% endif %} {% if gmail_success or outlook_success %}
+
+        <div class="settings-card" role="status">
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">Channel update</div>
+
+              <div class="settings-row-desc">
+
+                {{ gmail_success or outlook_success }}
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        {% endif %}
+
+
+ 
+
+        <div class="settings-card">
+
+          <!-- Gmail -->
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">📧 Gmail</div>
+
+
+ 
+
+              {% if gmail_connected %}
+
+              <div class="settings-row-desc">
+
+                {{ gmail_email if gmail_email else 'Connected' }}
+
+              </div>
+
+              {% else %}
+
+              <div class="settings-row-desc">Not connected</div>
+
+              {% endif %}
+
+            </div>
+
+
+ 
+
+            {% if gmail_connected %}
+
+            <form method="post" action="{{ url_for('channels.disconnect_gmail') }}" class="channel-action-form">
+
+              <button type="submit" class="channel-connect-btn btn-cancel" aria-label="Disconnect Gmail">
+
+                Disconnect
+
+              </button>
+
+            </form>
+
+            {% else %}
+
+            <a href="{{ url_for('auth.gmail_connect', next='settings') }}" class="channel-connect-btn btn-save"
+
+              aria-label="Connect Gmail">
+
+              Connect
+
+            </a>
+
+            {% endif %}
+
+          </div>
+
+
+ 
+
+          <!-- WhatsApp -->
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">💬 WhatsApp</div>
+
+              <div class="settings-row-desc">Not connected</div>
+
+            </div>
+
+
+ 
+
+            <button class="channel-connect-btn btn-save" onclick="showToast('Connecting WhatsApp...')">
+
+              Connect
+
+            </button>
+
+          </div>
+
+
+ 
+
+          <!-- Telegram -->
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">✈ Telegram</div>
+
+              <div class="settings-row-desc">Not connected</div>
+
+            </div>
+
+
+ 
+
+            <button class="channel-connect-btn btn-save" onclick="showToast('Connecting Telegram...')">
+
+              Connect
+
+            </button>
+
+          </div>
+
+
+ 
+
+          <!-- Outlook -->
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">📮 Outlook</div>
+
+              {% if outlook_connected %}
+
+              <div class="settings-row-desc">
+
+                {{ outlook_email if outlook_email else 'Connected locally' }}
+
+              </div>
+
+              {% else %}
+
+              <div class="settings-row-desc">Not connected</div>
+
+              {% endif %}
+
+            </div>
+
+
+ 
+
+            {% if outlook_connected %}
+
+            <form method="post" action="{{ url_for('channels.disconnect_outlook') }}" class="channel-action-form">
+
+              <button type="submit" class="channel-connect-btn btn-cancel">
+
+                Disconnect
+
+              </button>
+
+            </form>
+
+            {% else %}
+
+            <form method="post" action="{{ url_for('channels.connect_local_outlook') }}" class="channel-action-form">
+
+              <button type="submit" class="channel-connect-btn btn-save">
+
+                Connect
+
+              </button>
+
+            </form>
+
+            {% endif %}
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Privacy Section -->
+
+      <div id="spanel-security" class="settings-section hidden">
+
+        <div class="settings-section-title">Privacy & Security</div>
+
+        <div class="settings-section-desc">Control your data and security preferences.</div>
+
+        <div class="settings-card">
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">AI data usage</div>
+
+              <div class="settings-row-desc">Allow message analysis for improved AI suggestions</div>
+
+            </div>
+
+            <label class="toggle"><input id="settings-ai-data-usage" type="checkbox" {% if settings.ai_data_usage|default(true) %}checked{% endif %}><span class="toggle-slider"></span></label>
+
+          </div>
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">Change Password</div>
+
+              <div class="settings-row-desc">Update your account password</div>
+
+            </div>
+
+            <button class="btn-cancel" style="font-size:12px;"
+
+              onclick="openChangePassword()">Update</button>
+
+          </div>
+
+        </div>
+
+        <div class="settings-save-row">
+
+          <button class="btn-save" onclick="savePrivacySettings()">Save Changes</button>
+
+          <button class="btn-cancel">Cancel</button>
+
+        </div>
+
+      </div>
+
+      <!-- Appearance Tab -->
+
+      <div id="spanel-appearance" class="settings-section hidden">
+
+        <div class="settings-section-title">Appearance</div>
+
+        <div class="settings-section-desc">Customise how Voice Mail looks for you.</div>
+
+        <div class="settings-card">
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">Theme</div>
+
+              <div class="settings-row-desc">Choose your preferred colour scheme</div>
+
+            </div>
+
+            <select id="theme-select" class="settings-select-sm" data-current-theme="{{ settings.theme|default(theme_preference|default('system')) }}">
+
+              <option value="light" {% if settings.theme|default(theme_preference|default('system')) == 'light' %}selected{% endif %}>Light</option>
+
+              <option value="dark" {% if settings.theme|default(theme_preference|default('system')) == 'dark' %}selected{% endif %}>Dark</option>
+
+              <option value="system" {% if settings.theme|default(theme_preference|default('system')) == 'system' %}selected{% endif %}>System</option>
+
+            </select>
+
+          </div>
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">Message density</div>
+
+              <div class="settings-row-desc">Adjust spacing in message lists</div>
+
+            </div>
+
+            <select id="settings-message-density" class="settings-select-sm">
+
+              <option value="default" {% if settings.message_density|default('default') == 'default' %}selected{% endif %}>Default</option>
+
+              <option value="compact" {% if settings.message_density|default('default') == 'compact' %}selected{% endif %}>Compact</option>
+
+              <option value="comfortable" {% if settings.message_density|default('default') == 'comfortable' %}selected{% endif %}>Comfortable</option>
+
+            </select>
+
+          </div>
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">Font size</div>
+
+              <div class="settings-row-desc">Adjust reading font size</div>
+
+            </div>
+
+            <select id="settings-font-size" class="settings-select-sm">
+
+              <option value="medium" {% if settings.font_size|default('medium') == 'medium' %}selected{% endif %}>Medium (14px)</option>
+
+              <option value="small" {% if settings.font_size|default('medium') == 'small' %}selected{% endif %}>Small (12px)</option>
+
+              <option value="large" {% if settings.font_size|default('medium') == 'large' %}selected{% endif %}>Large (16px)</option>
+
+            </select>
+
+          </div>
+
+        </div>
+
+        <div class="settings-save-row">
+
+          <button class="btn-save" onclick="saveAppearancePreferences()">Save Changes</button>
+
+          <button class="btn-cancel">Cancel</button>
+
+        </div>
+
+      </div>
+
+      <!-- Language Tab -->
+
+      <div id="spanel-language" class="settings-section hidden">
+
+        <div class="settings-section-title">Language Settings</div>
+
+        <div class="settings-section-desc">Choose your preferred language here.</div>
+
+        <div class="settings-card">
+
+          <div class="settings-row">
+
+            <div class="settings-row-left">
+
+              <div class="settings-row-label">Choose Language</div>
+
+              <div class="settings-row-desc">Choose your preferred language here</div>
+
+            </div>
+
+            <select id="language-select" class="settings-select-sm">
+
+              <option value="English" {% if settings.language|default('English') == 'English' %}selected{% endif %}>English</option>
+
+              <option value="Hindi" {% if settings.language|default('English') == 'Hindi' %}selected{% endif %}>Hindi</option>
+
+              <option value="Tamil" {% if settings.language|default('English') == 'Tamil' %}selected{% endif %}>Tamil</option>
+
+              <option value="Kannada" {% if settings.language|default('English') == 'Kannada' %}selected{% endif %}>Kannada</option>
+
+              <option value="French" {% if settings.language|default('English') == 'French' %}selected{% endif %}>French</option>
+
+              <option value="Spanish" {% if settings.language|default('English') == 'Spanish' %}selected{% endif %}>Spanish</option>
+
+              <option value="German" {% if settings.language|default('English') == 'German' %}selected{% endif %}>German</option>
+
+              <option value="Arabic" {% if settings.language|default('English') == 'Arabic' %}selected{% endif %}>Arabic</option>
+
+              <option value="Chinese" {% if settings.language|default('English') == 'Chinese' %}selected{% endif %}>Chinese</option>
+
+              <option value="Japanese" {% if settings.language|default('English') == 'Japanese' %}selected{% endif %}>Japanese</option>
+
+            </select>
+
+          </div>
+
+        </div>
+
+        <div class="settings-save-row">
+
+          <button class="btn-save" onclick="saveLanguagePreference()">
+
+    Save Changes
+
+</button>
+
+          <button class="btn-cancel">Cancel</button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+ 
+
+<!-- ✅ Change Password Model -->
+
+<div id="changePasswordModal" class="modal">
+
+  <div class="modal-content">
+
+    <span class="close" onclick="closeChangePassword()">&times;</span>
+
+    <h3>Change Password</h3>
+
+
+ 
+
+    <!-- Old Password -->
+
+    <label>Old Password</label>
+
+    <input type="password" id="oldPassword" class="settings-input-sm" oninput="hideOldError()">
+
+
+ 
+
+    <small id="oldPwdHint" class="validation-error">
+
+      Old password is incorrect
+
+    </small>
+
+
+
+ 
+
+    <!-- New Password -->
+
+    <label>New Password</label>
+
+    <input type="password" id="newPassword" class="settings-input-sm" oninput="validatePassword()">
+
+
+
+ 
+
+    <!-- ✅ Password Hint -->
+
+    <small id="passwordHint" class="validation-error" style="display:none;">
+
+      Password must be 8+ chars, 1 uppercase, 1 lowercase, 1 symbol
+
+    </small>
+
+
+ 
+
+    <small id="samePwdHint" class="validation-error">
+
+      New password cannot be same as old password
+
+    </small>
+
+
+ 
+
+    <!-- Confirm Password -->
+
+    <label>Confirm New Password</label>
+
+    <input type="password" id="confirmPassword" class="settings-input-sm" oninput="checkPasswordMatch()">
+
+
+ 
+
+    <!-- ✅ Match Hint -->
+
+    <small id="matchHint" class="validation-error">
+
+      Passwords do not match
+
+    </small>
+
+
+ 
+
+    <br><br>
+
+    <button class="btn-save" onclick="submitPassword()">Update</button>
+
+  </div>
+
+</div>
+
+<div id="toast" class="toast"></div>
+
+
+ 
+
+{% endmacro %}
+
+
+ 
+
+{% if dashboard_embed|default(false) %}
+
+{{ dashboard_settings() }}
+
+{% else %}
+
 {% extends 'base.html' %}
 
-{% block content %}
-    <section class="settings-panel">
-        <h1>Settings</h1>
-        {% if gmail_error %}
-            <div class="panel" role="alert">
-                <strong>Gmail connection failed.</strong>
-                <p>{{ gmail_error }}</p>
-            </div>
-        {% endif %}
-        {% if gmail_success %}
-            <div class="panel" role="status">
-                <p>{{ gmail_success }}</p>
-            </div>
-        {% endif %}
-        <div class="settings-grid">
-            <div class="panel">
-                <h2>Gmail</h2>
-                <p>Connect your Gmail account to sync messages and send email.</p>
-                {% if gmail_connected %}
-                    <p><strong>Status:</strong> Connected{% if gmail_email %} as {{ gmail_email }}{% endif %}.</p>
-                    <form method="post" action="{{ url_for('channels.disconnect_gmail') }}">
-                        <button type="submit">Disconnect Gmail</button>
-                    </form>
-                {% else %}
-                    <p><strong>Status:</strong> Not connected.</p>
-                    <a href="{{ url_for('auth.gmail_connect', next='settings') }}">Connect Gmail</a>
-                {% endif %}
-            </div>
-            <div class="panel">
-                <h2>Telegram</h2>
-                <form class="settings-form">
-                    <label for="telegram-token">Telegram Bot Token</label>
-                    <input id="telegram-token" name="telegram_token" type="text" placeholder="Enter token" />
-                    <button type="button">Save Token</button>
-                </form>
-            </div>
-        </div>
-    </section>
+
+ 
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/settings.css?v=theme-20260521" />
 {% endblock %}
+
+
+{% block content %}
+
+<section class="settings-panel">
+
+  <h1>Settings</h1>
+
+  {% if gmail_error %}
+
+  <div class="panel" role="alert">
+
+    <strong>Gmail connection failed.</strong>
+
+    <p>{{ gmail_error }}</p>
+
+  </div>
+
+  {% endif %}
+
+  {% if gmail_success %}
+
+  <div class="panel" role="status">
+
+    <p>{{ gmail_success }}</p>
+
+  </div>
+
+  {% endif %}
+
+  <div class="settings-grid">
+
+    <div class="panel">
+
+      <h2>Gmail</h2>
+
+      <p>Connect your Gmail account to sync messages and send email.</p>
+
+      {% if gmail_connected %}
+
+      <p><strong>Status:</strong> Connected{% if gmail_email %} as {{ gmail_email }}{% endif %}.</p>
+
+      <form method="post" action="{{ url_for('channels.disconnect_gmail') }}">
+
+        <button type="submit">Disconnect Gmail</button>
+
+      </form>
+
+      {% else %}
+
+      <p><strong>Status:</strong> Not connected.</p>
+
+      <a href="{{ url_for('auth.gmail_connect', next='settings') }}">Connect Gmail</a>
+
+      {% endif %}
+
+    </div>
+
+    <div class="panel">
+
+      <h2>Telegram</h2>
+
+      <form class="settings-form">
+
+        <label for="telegram-token">Telegram Bot Token</label>
+
+        <input id="telegram-token" name="telegram_token" type="text" placeholder="Enter token" />
+
+        <button type="button">Save Token</button>
+
+      </form>
+
+    </div>
+
+  </div>
+
+</section>
+
+{% endblock %}
+
+{% endif %}

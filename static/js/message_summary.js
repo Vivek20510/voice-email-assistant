@@ -1,141 +1,110 @@
 (function () {
-  const DEFAULT_SUMMARY_URL = "/nlp/summarize";
-  const EMPTY_SUMMARY = "No message content is available to summarize.";
-  const ERROR_SUMMARY =
+  const cache = new Map();
+  const activeLoads = new WeakMap();
+  const REQUEST_TIMEOUT_MS = 15000;
+  const EMPTY_TEXT = "No message content is available to summarize.";
+  const ERROR_TEXT =
     "Summary is temporarily unavailable. Please review the message body below.";
-  const LOADING_SUMMARY = "Generating summary...";
-  const SUMMARY_REQUEST_TIMEOUT_MS = 35000;
-  const summaryCache = new Map();
-  const inFlightByElement = new WeakMap();
 
-  function setSummaryState(summaryEl, state, text) {
-    summaryEl.dataset.state = state;
-    summaryEl.textContent = text;
-  }
-
-  function cleanValue(value) {
+  function clean(value) {
     return String(value || "").trim();
   }
 
-  function buildPayload(summaryEl) {
-    return {
-      subject: cleanValue(summaryEl.dataset.subject),
-      sender: cleanValue(summaryEl.dataset.sender),
-      body: cleanValue(summaryEl.dataset.body),
-    };
-  }
-
-  function buildCacheKey(url, payload) {
+  function signatureFor(el) {
+    const data = el.dataset || {};
     return JSON.stringify({
-      url,
-      subject: payload.subject,
-      sender: payload.sender,
-      body: payload.body,
+      url: data.summaryUrl || "/nlp/summarize",
+      subject: clean(data.subject),
+      sender: clean(data.sender),
+      body: clean(data.body),
     });
   }
 
-  function cancelElementRequest(summaryEl) {
-    const activeRequest = inFlightByElement.get(summaryEl);
-    if (activeRequest) {
-      window.clearTimeout(activeRequest.timeoutId);
-      activeRequest.abortController.abort();
-      inFlightByElement.delete(summaryEl);
-    }
+  function payloadFor(el) {
+    const data = el.dataset || {};
+    return {
+      subject: clean(data.subject),
+      sender: clean(data.sender),
+      body: clean(data.body),
+    };
   }
 
-  async function loadEmailSummary(summaryEl) {
-    if (!summaryEl || summaryEl.dataset.state === "ready") {
+  async function load(el) {
+    if (!el) return;
+
+    const payload = payloadFor(el);
+    if (!payload.subject && !payload.sender && !payload.body) {
+      el.dataset.state = "empty";
+      el.textContent = EMPTY_TEXT;
       return;
     }
 
-    const payload = buildPayload(summaryEl);
-    if (!payload.subject && !payload.body) {
-      cancelElementRequest(summaryEl);
-      setSummaryState(summaryEl, "empty", EMPTY_SUMMARY);
-      return;
+    const signature = signatureFor(el);
+    const cached = cache.get(signature);
+    if (cached) {
+      el.dataset.state = "ready";
+      el.textContent = cached;
+      return cached;
     }
 
-    const summaryUrl = summaryEl.dataset.summaryUrl || DEFAULT_SUMMARY_URL;
-    const cacheKey = buildCacheKey(summaryUrl, payload);
-    const cachedSummary = summaryCache.get(cacheKey);
-    if (cachedSummary) {
-      cancelElementRequest(summaryEl);
-      setSummaryState(summaryEl, "ready", cachedSummary);
-      return;
+    const existing = activeLoads.get(el);
+    if (existing) {
+      if (existing.signature === signature) return existing.promise;
+      existing.controller.abort();
     }
 
-    const activeRequest = inFlightByElement.get(summaryEl);
-    if (activeRequest) {
-      if (activeRequest.cacheKey === cacheKey) {
-        return;
-      }
-      activeRequest.abortController.abort();
-    }
+    const url = el.dataset.summaryUrl || "/nlp/summarize";
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(
+      () => controller.abort(),
+      REQUEST_TIMEOUT_MS,
+    );
 
-    const abortController = new AbortController();
-    const timeoutId = window.setTimeout(() => {
-      abortController.abort();
-    }, SUMMARY_REQUEST_TIMEOUT_MS);
-    inFlightByElement.set(summaryEl, { abortController, cacheKey, timeoutId });
-    setSummaryState(summaryEl, "loading", LOADING_SUMMARY);
-
-    try {
-      const response = await fetch(summaryUrl, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        credentials: "same-origin",
-        body: JSON.stringify(payload),
-        signal: abortController.signal,
-      });
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok || !data.summary) {
-        throw new Error(data.error || "Summary request failed.");
-      }
-
-      if (inFlightByElement.get(summaryEl)?.cacheKey !== cacheKey) {
-        return;
-      }
-
-      summaryCache.set(cacheKey, data.summary);
-      setSummaryState(summaryEl, "ready", data.summary);
-    } catch (error) {
-      if (error.name === "AbortError") {
-        console.warn("Email summary fetch timed out or was cancelled.", error);
-        if (inFlightByElement.get(summaryEl)?.cacheKey === cacheKey) {
-          setSummaryState(summaryEl, "error", ERROR_SUMMARY);
+    const promise = fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("summary failed");
+        const data = await response.json();
+        const summary = clean(data.summary);
+        if (!summary) throw new Error("empty summary");
+        cache.set(signature, summary);
+        if (activeLoads.get(el)?.signature === signature) {
+          el.dataset.state = "ready";
+          el.textContent = summary;
+          activeLoads.delete(el);
         }
-        return;
-      }
-      console.warn("Email summary fetch failed.", error);
-      setSummaryState(summaryEl, "error", ERROR_SUMMARY);
-    } finally {
-      const activeRequest = inFlightByElement.get(summaryEl);
-      if (activeRequest?.cacheKey === cacheKey) {
-        window.clearTimeout(activeRequest.timeoutId);
-        inFlightByElement.delete(summaryEl);
-      }
-    }
+        return summary;
+      })
+      .catch((error) => {
+        if (error && error.name === "AbortError") {
+          if (activeLoads.get(el)?.signature === signature) {
+            el.dataset.state = "error";
+            el.textContent = ERROR_TEXT;
+            activeLoads.delete(el);
+          }
+          return undefined;
+        }
+
+        el.dataset.state = "error";
+        el.textContent = ERROR_TEXT;
+        activeLoads.delete(el);
+        return undefined;
+      })
+      .finally(() => {
+        window.clearTimeout(timeoutId);
+      });
+
+    activeLoads.set(el, { signature, controller, promise });
+    return promise;
   }
 
-  function initEmailSummaries(root) {
-    const scope = root || document;
-    scope
-      .querySelectorAll("[data-summary-url][data-state]")
-      .forEach((summaryEl) => loadEmailSummary(summaryEl));
+  function clearCache() {
+    cache.clear();
   }
 
-  window.EmailSummary = {
-    cancel: cancelElementRequest,
-    clearCache: () => summaryCache.clear(),
-    init: initEmailSummaries,
-    load: loadEmailSummary,
-  };
-
-  document.addEventListener("DOMContentLoaded", () => {
-    initEmailSummaries();
-  });
+  window.EmailSummary = { load, clearCache };
 })();

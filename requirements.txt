@@ -6,3 +6,7 @@ pytest>=8.0.0
 pytest-cov>=4.0.0
 requests>=2.31.0
 pywin32>=306; sys_platform == 'win32'
+torch>=2.0.0
+transformers>=4.40.0
+huggingface-hub>=0.23.0
+openai-whisper>=20231117

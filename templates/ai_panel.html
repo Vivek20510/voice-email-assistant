@@ -1,0 +1,81 @@
+<!-- ✅ AI PANEL COMPONENT -->
+
+<div id="dashboard-ai-panel" class="dashboard-side">
+  <div class="ai-search-panel" id="ai-search-panel">
+    <!-- ✅ Header -->
+
+    <div class="ai-panel-header">
+      <div>
+        <div class="ai-panel-title">✦ AI Assistant</div>
+
+        <div class="ai-panel-sub">Quick insights from your inbox</div>
+      </div>
+    </div>
+
+    <!-- ✅ Input Box -->
+
+    <div class="ai-search-box">
+      <input
+        type="text"
+        class="ai-search-input"
+        id="ai-input"
+        placeholder="Ask AI to summarise, find, or filter…"
+        onkeydown="handleAiKey(event)"
+      />
+
+      <button class="ai-send-btn" onclick="sendAiQuery()" title="Send">
+        ↑
+      </button>
+    </div>
+
+    <!-- ✅ Quick Suggestions -->
+
+    <div class="ai-chips">
+      <div
+        class="ai-chip"
+        onclick="prefillAi('Summarize my unread emails in 5 bullet points')"
+      >
+        Summarise Emails
+      </div>
+
+      <div
+        class="ai-chip"
+        onclick="prefillAi('What are the important emails today?')"
+      >
+        Important Today
+      </div>
+
+      <div
+        class="ai-chip"
+        onclick="prefillAi('Extract action items from my emails')"
+      >
+        Action Items
+      </div>
+
+      <div
+        class="ai-chip"
+        onclick="prefillAi('Show emails with attachments and explain them')"
+      >
+        Attachments
+      </div>
+    </div>
+
+    <!-- ✅ Results Area -->
+
+    <div class="ai-results-area" id="ai-results">
+      <div class="ai-placeholder">✦ Ask something about your inbox...</div>
+
+      <div class="ai-empty" id="ai-empty">
+        <div class="ai-empty-icon">✦</div>
+
+        <div class="ai-empty-text">
+          Get instant summaries,<br />
+
+          action items, and insights<br />
+
+          from your inbox.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

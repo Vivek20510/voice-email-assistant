@@ -1,444 +1,282 @@
-"""Outlook local email service using Windows COM/MAPI interface."""
-
 import base64
-import logging
-import re
+import binascii
 import sys
 import time
 from datetime import datetime, timezone
-from typing import Any
 
-logger = logging.getLogger(__name__)
+from src.db import db
+from src.models import UserToken
+from src.services.email_service import EmailServiceError
 
-# Error message constants for consistent messaging
-ERROR_OUTLOOK_NOT_AVAILABLE = "Outlook is not installed on this system."
-ERROR_OUTLOOK_NOT_FOUND = "Message not found in Outlook."
-ERROR_INVALID_ID_FORMAT = "Invalid message ID format (not valid base64)."
-ERROR_OUTLOOK_INBOX_FAILURE = "Failed to access Outlook inbox."
-
-# Availability cache: {"available": bool | None, "checked_at": float, "ttl": int}
-_outlook_availability_cache = {"available": None, "checked_at": 0, "ttl": 30}
+OUTLOOK_INBOX_FOLDER = 6
+OUTLOOK_MAIL_ITEM_CLASS = 43
+_OUTLOOK_AVAILABILITY_TTL_SECONDS = 30
+_outlook_availability_cache = {"available": None, "checked_at": 0}
 
 
-class OutlookServiceError(Exception):
+class OutlookServiceError(EmailServiceError):
     """Base error for Outlook-backed email operations."""
 
-    def __init__(self, message: str, status_code: int = 500):
-        super().__init__(message)
-        self.message = message
-        self.status_code = status_code
+
+class OutlookConnectionError(OutlookServiceError):
+    """Raised when local Outlook is not connected or unavailable."""
 
 
-class OutlookNotAvailableError(OutlookServiceError):
-    """Raised when Outlook is not installed or unavailable."""
+class OutlookNotAvailableError(OutlookConnectionError):
+    """Raised when local desktop Outlook cannot be automated."""
 
 
-class OutlookNotEnabledError(OutlookServiceError):
-    """Raised when Outlook is not enabled/connected for the user."""
-
-
-def _validate_entry_id(encoded_entry_id: str) -> bool:
-    """Validate that the encoded EntryID is valid base64 format.
-
-    Args:
-        encoded_entry_id: Base64-encoded EntryID string
-
-    Returns:
-        bool: True if valid base64 format, False otherwise
-
-    Note:
-        This only validates format, not actual Outlook access.
-    """
-    if not encoded_entry_id or not isinstance(encoded_entry_id, str):
-        return False
-
-    # Check for valid base64 characters only (a-z, A-Z, 0-9, -, _, =)
-    if not re.match(r"^[A-Za-z0-9_-]*={0,2}$", encoded_entry_id):
-        return False
-
-    try:
-        padding = "=" * (-len(encoded_entry_id) % 4)
-        base64.urlsafe_b64decode(f"{encoded_entry_id}{padding}")
-        return True
-    except Exception:
-        logger.debug(f"Invalid EntryID format: {encoded_entry_id[:20]}...")
-        return False
-
-
-def _call_with_retry(func, max_retries: int = 2, delay: float = 0.5):
-    """Execute a function with retry logic for transient errors.
-
-    Args:
-        func: Callable to execute
-        max_retries: Maximum retry attempts (default 2)
-        delay: Delay in seconds between retries (default 0.5)
-
-    Returns:
-        Result of func() if successful
-
-    Raises:
-        Exception: If all retries fail
-
-    Note:
-        Retries on transient errors (Exception), not on permanent failures
-        like ImportError or specific COM errors.
-    """
-    last_exception = None
-    for attempt in range(max_retries + 1):
-        try:
-            return func()
-        except Exception as exc:
-            last_exception = exc
-            if attempt < max_retries:
-                logger.debug(f"Retry {attempt + 1}/{max_retries} after {delay}s: {exc}")
-                time.sleep(delay)
-            else:
-                logger.warning(f"All {max_retries + 1} attempts failed: {exc}")
-    raise last_exception
+class OutlookAPIError(OutlookServiceError):
+    """Raised when local Outlook automation fails."""
 
 
 def is_outlook_available() -> bool:
-    """Check if Microsoft Outlook is installed and available on Windows.
-
-    Caches result for 30 seconds to reduce repeated COM initialization.
-
-    Returns:
-        bool: True if Outlook COM is available, False otherwise.
-
-    Edge cases:
-        - Non-Windows platforms: Always returns False
-        - Win32com not installed: Returns False
-        - Outlook not installed: Returns False
-        - COM initialization timeout: Returns False
-    """
-    # Check cache
     now = time.time()
-    cache = _outlook_availability_cache
-    if cache["available"] is not None and (now - cache["checked_at"]) < cache["ttl"]:
-        logger.debug(f"Using cached Outlook availability: {cache['available']}")
-        return cache["available"]
+    cached = _outlook_availability_cache["available"]
+    checked_at = _outlook_availability_cache["checked_at"]
+    if cached is not None and now - checked_at < _OUTLOOK_AVAILABILITY_TTL_SECONDS:
+        return bool(cached)
 
-    logger.debug("Checking Outlook availability...")
+    available = False
+    if sys.platform == "win32":
+        try:
+            import pythoncom
+            import win32com.client
 
-    if sys.platform != "win32":
-        cache["available"] = False
-        cache["checked_at"] = now
-        logger.debug("Non-Windows platform detected, Outlook unavailable")
-        return False
+            pythoncom.CoInitialize()
+            try:
+                win32com.client.Dispatch("Outlook.Application")
+                available = True
+            finally:
+                try:
+                    pythoncom.CoUninitialize()
+                except Exception:
+                    pass
+        except Exception:
+            available = False
 
-    try:
-        import win32com.client
+    _outlook_availability_cache["available"] = available
+    _outlook_availability_cache["checked_at"] = now
+    return available
 
-        win32com.client.Dispatch("Outlook.Application")
-        cache["available"] = True
-        cache["checked_at"] = now
-        logger.debug("Outlook available")
-        return True
-    except ImportError:
-        logger.debug("Win32com not installed")
-        cache["available"] = False
-        cache["checked_at"] = now
-        return False
-    except Exception as exc:
-        logger.debug(f"Outlook COM initialization failed: {exc}")
-        cache["available"] = False
-        cache["checked_at"] = now
-        return False
+
+def connect_outlook(user_id: int) -> dict:
+    account_email = _get_account_email()
+    token = UserToken.query.filter_by(user_id=user_id, service="outlook").first()
+    if token is None:
+        token = UserToken(user_id=user_id, service="outlook")
+        db.session.add(token)
+
+    token.account_email = account_email
+    token.access_token = "local-pywin32"
+    token.refresh_token = None
+    token.expires_at = None
+    db.session.commit()
+    return {"message": "Outlook connected.", "account_email": account_email}
 
 
 def list_emails(
     user_id: int,
-    limit: int = 10,
-    sort_by: str = "received_time",
+    limit: int = 25,
+    sort_by: str = "received_at",
     ascending: bool = False,
 ) -> dict:
-    """List emails from the user's Outlook inbox.
-
-    Args:
-        user_id: User ID (unused for local Outlook, kept for API consistency)
-        limit: Maximum number of emails to return (default 10, max 100)
-        sort_by: Field to sort by ("received_time" or "subject")
-        ascending: If True, sort ascending; if False (default), descending
-
-    Returns:
-        dict: {"emails": [...], "messages": [...]} matching Gmail API shape
-
-    Raises:
-        OutlookNotAvailableError: If Outlook is not installed or unavailable
-
-    Edge cases:
-        - Empty inbox: Returns empty list
-        - Invalid sort_by: Uses received_time
-        - Outlook not available: Returns 503 with error message
-        - COM timeout: Retries twice before failing
-    """
-    # Check availability (cached)
     if not is_outlook_available():
-        logger.warning(
-            f"List emails requested but Outlook unavailable for user {user_id}"
-        )
-        raise OutlookNotAvailableError(ERROR_OUTLOOK_NOT_AVAILABLE, 503)
+        raise OutlookNotAvailableError("Outlook is not installed or unavailable.", 503)
 
-    # Sanitize parameters
-    limit = max(1, min(int(limit), 100))
-    if sort_by not in ("received_time", "subject"):
-        sort_by = "received_time"
-        logger.debug(f"Invalid sort_by '{sort_by}', using 'received_time'")
+    _outlook_token_for_user(user_id)
+    outlook = _outlook_namespace()
+    inbox = outlook.GetDefaultFolder(OUTLOOK_INBOX_FOLDER)
+    items = inbox.Items
+    items.Sort("[ReceivedTime]", bool(ascending))
 
-    logger.debug(
-        f"List emails for user {user_id}: limit={limit}, sort_by={sort_by}, ascending={ascending}"
-    )
+    messages = []
+    max_results = max(1, min(int(limit), 50))
+    index = 1
 
-    def _fetch_from_outlook():
-        import win32com.client
+    while len(messages) < max_results and index <= items.Count:
+        item = items.Item(index)
+        index += 1
+        if getattr(item, "Class", None) != OUTLOOK_MAIL_ITEM_CLASS:
+            continue
+        messages.append(_list_shape(_normalize_message(item)))
 
-        outlook = win32com.client.Dispatch("Outlook.Application")
-        namespace = outlook.GetNamespace("MAPI")
-        inbox = namespace.GetDefaultFolder(6)  # 6 = olFolderInbox
-
-        items = inbox.Items
-
-        # Sort items by received time (descending by default)
-        if sort_by == "received_time":
-            items.Sort("[ReceivedTime]", not ascending)
-        elif sort_by == "subject":
-            items.Sort("[Subject]", not ascending)
-
-        messages = []
-        for idx, item in enumerate(items):
-            if idx >= limit:
-                break
-
-            try:
-                message = _normalize_outlook_message(item)
-                messages.append(message)
-            except Exception as exc:
-                # Skip messages that fail to normalize
-                logger.debug(f"Failed to normalize message at index {idx}: {exc}")
-                continue
-
-        return messages
-
-    try:
-        messages = _call_with_retry(_fetch_from_outlook, max_retries=1)
-        logger.debug(f"Successfully fetched {len(messages)} emails from Outlook")
-
-        return {
-            "emails": messages,
-            "messages": messages,
-            "next_page_token": None,
-        }
-    except Exception as exc:
-        logger.error(f"Failed to access Outlook inbox: {exc}", exc_info=True)
-        raise OutlookNotAvailableError(ERROR_OUTLOOK_INBOX_FAILURE, 503) from exc
+    return {"emails": messages, "messages": messages, "next_page_token": None}
 
 
-def read_email(user_id: int, encoded_message_id: str) -> dict:
-    """Read a single email from Outlook by EntryID.
-
-    Args:
-        user_id: User ID (unused for local Outlook, kept for API consistency)
-        encoded_message_id: Base64-encoded Outlook EntryID
-
-    Returns:
-        dict: Message details matching Gmail API shape
-
-    Raises:
-        OutlookServiceError (400): If message ID format is invalid
-        OutlookNotAvailableError (503): If Outlook is not installed
-        OutlookServiceError (404): If message not found
-
-    Edge cases:
-        - Invalid base64 format: Returns 400 immediately
-        - Outlook not available: Returns 503 (checked after format validation)
-        - Message not found: Returns 404
-        - COM timeout: Retries once before failing with 503
-    """
-    # VALIDATION STEP: Check format before availability check (returns 400, not 503)
-    if not _validate_entry_id(encoded_message_id):
-        logger.debug(f"Invalid EntryID format received: {encoded_message_id[:20]}...")
-        raise OutlookServiceError(ERROR_INVALID_ID_FORMAT, 400)
-
-    # AVAILABILITY STEP: Check if Outlook is available (returns 503)
+def read_email(
+    user_id: int,
+    message_id: str | None = None,
+    encoded_message_id: str | None = None,
+) -> dict:
+    message_id = message_id or encoded_message_id
     if not is_outlook_available():
-        logger.warning(
-            f"Read email requested but Outlook unavailable for user {user_id}"
-        )
-        raise OutlookNotAvailableError(ERROR_OUTLOOK_NOT_AVAILABLE, 503)
+        raise OutlookNotAvailableError("Outlook is not installed or unavailable.", 503)
 
-    # DECODING STEP: Decode EntryID from base64
+    _outlook_token_for_user(user_id)
+    entry_id = _decode_message_id(message_id or "")
+
     try:
-        entry_id = _decode_entry_id(encoded_message_id)
+        item = _outlook_namespace().GetItemFromID(entry_id)
     except Exception as exc:
-        logger.debug(f"Failed to decode EntryID: {exc}")
-        raise OutlookServiceError(ERROR_INVALID_ID_FORMAT, 400) from exc
+        raise OutlookAPIError("Unable to load this Outlook message.", 404) from exc
+    return _normalize_message(item)
 
-    logger.debug(f"Read email for user {user_id}: {encoded_message_id[:20]}...")
 
-    def _fetch_message_from_outlook():
+def _outlook_token_for_user(user_id: int) -> UserToken:
+    token = UserToken.query.filter_by(user_id=user_id, service="outlook").first()
+    if token is None:
+        raise OutlookConnectionError("Outlook is not connected for this account.", 409)
+    return token
+
+
+def _outlook_namespace():
+    try:
+        import pythoncom
         import win32com.client
+    except ImportError as exc:
+        raise OutlookNotAvailableError(
+            "pywin32 is not installed. Install pywin32 to connect local Outlook.",
+            503,
+        ) from exc
 
-        outlook = win32com.client.Dispatch("Outlook.Application")
-        namespace = outlook.GetNamespace("MAPI")
-        message_item = namespace.GetItemFromID(entry_id)
-
-        if not message_item:
-            logger.warning(f"Message not found for EntryID: {entry_id[:20]}...")
-            raise OutlookServiceError(ERROR_OUTLOOK_NOT_FOUND, 404)
-
-        return _normalize_outlook_message(message_item)
-
-    # OUTLOOK CALL STEP: Fetch from Outlook with retry logic
+    pythoncom.CoInitialize()
     try:
-        message = _call_with_retry(_fetch_message_from_outlook, max_retries=1)
-        logger.debug("Successfully read email from Outlook")
-        return message
-    except OutlookServiceError:
-        raise
+        app = win32com.client.Dispatch("Outlook.Application")
+        namespace = app.GetNamespace("MAPI")
+        namespace.Logon("", "", False, False)
+        return namespace
     except Exception as exc:
-        logger.error(f"Failed to read message from Outlook: {exc}", exc_info=True)
-        raise OutlookNotAvailableError(ERROR_OUTLOOK_NOT_AVAILABLE, 503) from exc
+        detail = str(exc)
+        if "Invalid class string" in detail or "-2147221005" in detail:
+            raise OutlookNotAvailableError(
+                "Outlook is not installed or classic desktop Outlook is not registered.",
+                503,
+            ) from exc
+        raise OutlookConnectionError(
+            "Unable to access local Outlook. Open classic Outlook and make sure a profile is configured.",
+            409,
+        ) from exc
 
 
-def _normalize_outlook_message(item: Any) -> dict:
-    """Normalize an Outlook COM item to a standard message dict.
-
-    Args:
-        item: Outlook.MailItem COM object
-
-    Returns:
-        dict: Normalized message with fields matching Gmail API
-    """
+def _get_account_email() -> str | None:
+    namespace = _outlook_namespace()
     try:
-        subject = str(item.Subject or "")
+        address = getattr(namespace.CurrentUser, "Address", None)
+        name = getattr(namespace.CurrentUser, "Name", None)
+        return address or name
     except Exception:
-        subject = ""
+        return None
 
-    try:
-        sender_name = str(item.SenderName or "")
-    except Exception:
-        sender_name = ""
 
-    try:
-        sender_email = str(item.SenderEmailAddress or "")
-    except Exception:
-        sender_email = ""
-
-    try:
-        to = str(item.To or "")
-    except Exception:
-        to = ""
-
-    # Body/HTMLBody fallback: prefer Body, fall back to HTMLBody
-    body_text = None
-    body_html = None
-
-    try:
-        body_text = str(item.Body or "").strip()
-        if not body_text:
-            body_text = None
-    except Exception:
-        body_text = None
-
-    if not body_text:
-        try:
-            body_html = str(item.HTMLBody or "").strip()
-            if not body_html:
-                body_html = None
-        except Exception:
-            body_html = None
-
-    # Fallback: if no body, use empty string
-    if not body_text and not body_html:
-        body_text = ""
-
-    try:
-        entry_id = str(item.EntryID or "")
-    except Exception:
-        entry_id = ""
-
-    try:
-        received_time_str = _normalize_outlook_datetime(item.ReceivedTime)
-    except Exception:
-        received_time_str = None
-
-    # Encode EntryID for URL-safe use
-    encoded_entry_id = _encode_entry_id(entry_id)
+def _normalize_message(item) -> dict:
+    sender_email = getattr(item, "SenderEmailAddress", None)
+    sender_name = getattr(item, "SenderName", None)
+    received_at = _normalize_outlook_datetime(getattr(item, "ReceivedTime", None))
+    categories = getattr(item, "Categories", None)
+    labels = [part.strip() for part in str(categories or "").split(",") if part.strip()]
+    body_text = getattr(item, "Body", None)
+    body_html = getattr(item, "HTMLBody", None)
 
     return {
-        "id": encoded_entry_id,
-        "outlook_entry_id": entry_id,
-        "sender": sender_name or sender_email or "Unknown",
-        "sender_email": sender_email or None,
-        "to": to or None,
-        "subject": subject or "(No subject)",
+        "id": _encode_message_id(getattr(item, "EntryID", "")),
+        "gmail_id": None,
+        "outlook_id": getattr(item, "EntryID", None),
+        "sender": sender_name or sender_email or "Unknown sender",
+        "sender_email": sender_email,
+        "to": getattr(item, "To", None),
+        "cc": getattr(item, "CC", None),
+        "bcc": getattr(item, "BCC", None),
+        "subject": getattr(item, "Subject", None),
         "body_text": body_text,
         "body_html": body_html,
-        "snippet": (body_text or body_html or "")[:100],
-        "received_at": received_time_str,
-        "unread": False,  # Outlook COM doesn't easily expose unread state
-        "labels": [],
+        "snippet": _snippet(body_text, body_html),
+        "received_at": received_at,
+        "unread": bool(getattr(item, "UnRead", False)),
+        "labels": labels,
         "channel": "outlook",
     }
 
 
-def _encode_entry_id(entry_id: str) -> str:
-    """Encode Outlook EntryID to URL-safe base64.
+def _list_shape(message: dict) -> dict:
+    return {
+        "id": message["id"],
+        "gmail_id": None,
+        "outlook_id": message["outlook_id"],
+        "sender": message["sender"],
+        "sender_email": message["sender_email"],
+        "to": message["to"],
+        "subject": message["subject"],
+        "snippet": message["snippet"],
+        "received_at": message["received_at"],
+        "unread": message["unread"],
+        "labels": message["labels"],
+        "channel": message["channel"],
+    }
 
-    Args:
-        entry_id: Raw Outlook EntryID string
 
-    Returns:
-        str: Base64-encoded (URL-safe) EntryID
-    """
+def _encode_message_id(entry_id: str) -> str:
+    encoded = base64.urlsafe_b64encode(str(entry_id).encode("utf-8")).decode("ascii")
+    return f"outlook:{encoded.rstrip('=')}"
+
+
+def _validate_entry_id(encoded_message_id) -> bool:
+    if not isinstance(encoded_message_id, str) or not encoded_message_id:
+        return False
+
+    raw = encoded_message_id
+    if raw.startswith("outlook:"):
+        raw = raw.split(":", 1)[1]
+
+    padding = "=" * (-len(raw) % 4)
     try:
-        encoded = base64.urlsafe_b64encode(entry_id.encode("utf-8")).decode("utf-8")
-        return encoded
-    except Exception:
-        return ""
+        base64.b64decode(
+            f"{raw}{padding}".encode("ascii"),
+            altchars=b"-_",
+            validate=True,
+        )
+        return True
+    except (binascii.Error, UnicodeEncodeError, ValueError):
+        return False
 
 
-def _decode_entry_id(encoded_entry_id: str) -> str:
-    """Decode URL-safe base64 back to Outlook EntryID.
+def _decode_message_id(message_id: str) -> str:
+    if not _validate_entry_id(message_id):
+        raise OutlookAPIError("Invalid Outlook message id.", 400)
 
-    Args:
-        encoded_entry_id: Base64-encoded (URL-safe) EntryID
-
-    Returns:
-        str: Raw Outlook EntryID
-
-    Raises:
-        Exception: If decoding fails
-    """
-    padding = "=" * (-len(encoded_entry_id) % 4)
-    decoded = base64.urlsafe_b64decode(f"{encoded_entry_id}{padding}")
-    return decoded.decode("utf-8", errors="replace")
+    raw = str(message_id or "")
+    if raw.startswith("outlook:"):
+        raw = raw.split(":", 1)[1]
+    padding = "=" * (-len(raw) % 4)
+    return base64.b64decode(
+        f"{raw}{padding}".encode("ascii"),
+        altchars=b"-_",
+        validate=True,
+    ).decode("utf-8")
 
 
-def _normalize_outlook_datetime(datetime_obj: Any) -> str | None:
-    """Convert Outlook DateTime to ISO 8601 UTC format.
+def _normalize_outlook_datetime(value) -> str | None:
+    if not value:
+        return None
 
-    Args:
-        datetime_obj: Outlook DateTime COM object
-
-    Returns:
-        str: ISO 8601 UTC timestamp, or None if conversion fails
-    """
-    try:
-        # Outlook DateTime is typically a Python datetime object when accessed
-        if hasattr(datetime_obj, "year"):
-            # It's already a Python datetime-like object
-            dt = datetime_obj
-        else:
-            # Try direct conversion
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        try:
+            parsed = datetime.fromisoformat(str(value))
+        except (TypeError, ValueError):
             return None
 
-        if isinstance(dt, datetime):
-            # Ensure timezone awareness
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            return dt.astimezone(timezone.utc).isoformat()
+    if parsed.tzinfo is None:
+        local_tz = datetime.now().astimezone().tzinfo or timezone.utc
+        parsed = parsed.replace(tzinfo=local_tz)
+    return parsed.astimezone(timezone.utc).isoformat()
 
-        return None
-    except Exception:
-        return None
+
+def _normalize_datetime(value) -> str | None:
+    return _normalize_outlook_datetime(value)
+
+
+def _snippet(body_text: str | None, body_html: str | None) -> str:
+    text = (body_text or body_html or "").replace("\r", " ").replace("\n", " ")
+    return " ".join(text.split())[:220]

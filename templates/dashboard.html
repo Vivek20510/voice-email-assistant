@@ -571,13 +571,14 @@
                 <div class="settings-card" role="alert">
                   <div class="settings-row">
                     <div class="settings-row-left">
-                      <div class="settings-row-label">Gmail connection failed</div>
+                      <div class="settings-row-label">
+                        Gmail connection failed
+                      </div>
                       <div class="settings-row-desc">{{ gmail_error }}</div>
                     </div>
                   </div>
                 </div>
-                {% endif %}
-                {% if gmail_success %}
+                {% endif %} {% if gmail_success %}
                 <div class="settings-card" role="status">
                   <div class="settings-row">
                     <div class="settings-row-left">
@@ -779,7 +780,7 @@
         if (!targetPanel) return;
 
         const targetNav = document.querySelector(
-          `.settings-nav-item[onclick*="${panelId}"]`
+          `.settings-nav-item[onclick*="${panelId}"]`,
         );
         if (targetNav) {
           switchSettingsTab(targetNav, panelId);
@@ -803,24 +804,38 @@
 
       async function toggleOutlook(enabled) {
         try {
-          const response = await fetch('/api/channels/outlook', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'same-origin',
-            body: JSON.stringify({ enabled })
+          const response = await fetch("/api/channels/outlook", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ enabled }),
           });
           const result = await response.json();
           if (response.ok) {
             location.reload();
           } else {
-            showToast('Error: ' + (result.error || 'Failed to toggle Outlook'));
+            showToast("Error: " + (result.error || "Failed to toggle Outlook"));
           }
         } catch (error) {
-          showToast('Network error');
+          showToast("Network error");
         }
       }
     </script>
     <script src="{{ url_for('static', filename='js/message_summary.js') }}"></script>
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ai.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ai_panel.js') }}"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        if (typeof applyInitialDashboardState === "function")
+          applyInitialDashboardState();
+        if (typeof bindDashboardInteractions === "function")
+          bindDashboardInteractions();
+        if (typeof setActiveSidebarItem === "function") {
+          setActiveSidebarItem(window.currentDashboardView || "sb-inbox");
+        }
+        if (typeof loadInboxMessages === "function") loadInboxMessages();
+      });
+    </script>
   </body>
 </html>

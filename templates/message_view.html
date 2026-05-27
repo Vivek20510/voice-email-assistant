@@ -1,87 +1,333 @@
-{% extends 'base.html' %}
-{% block content %}
+{% macro dashboard_message_view() %}
+
+<!-- PAGE: VOICEMAIL VIEW -->
+
+<div id="page-voicemail" class="page-content">
+  <div class="inbox-toolbar">
+    <button class="back-btn" onclick="switchPage('dashboard')">← Back</button>
+
+    <h1>Message</h1>
+  </div>
+
+  <div class="msgview-wrap">
+    <div class="summary-card">
+      <div>
+        <div class="summary-badge">AI Summary</div>
+
+        <h3>Alice Rodriguez</h3>
+
+        <div class="summary-text">
+          Alice is requesting feedback on the Q3 report by end of Friday. Action
+          required: review the attached document and reply with comments before
+          the deadline.
+        </div>
+      </div>
+
+      <button class="read-aloud-btn" onclick="showToast('Reading aloud...')">
+        ▶ Read aloud
+      </button>
+    </div>
+
+    <div class="message-card">
+      <div class="sender-row">
+        <div class="sender-av">AR</div>
+
+        <div class="sender-info">
+          <div class="sender-name">
+            Alice Rodriguez
+
+            <span class="msg-tag tag-email">Email</span>
+          </div>
+
+          <div class="sender-email">alice@company.com → priya@company.com</div>
+        </div>
+
+        <div class="msg-timestamp">Today, 10:42 AM</div>
+      </div>
+
+      <div class="msg-subject-bar">Q3 Report Review - Feedback Needed</div>
+
+      <div class="msg-body-content">
+        <p>Hi Priya,</p>
+
+        <p>
+          Please find attached the Q3 summary report. I've highlighted the key
+          metrics and areas where I need your input before we present to the
+          board next Monday.
+        </p>
+
+        <p>
+          Specifically, I'd appreciate your review of the revenue forecast
+          assumptions in Section 3 and the risk matrix in Section 5. Your
+          expertise in those areas would be invaluable.
+        </p>
+
+        <p>
+          Could you please send me your feedback by EOD this Friday? This gives
+          us the weekend to incorporate comments before the final presentation.
+        </p>
+
+        <p>Best regards,<br />Alice</p>
+      </div>
+
+      <div class="msg-actions-row">
+        <button class="action-btn primary" onclick="switchPage('compose')">
+          ↩ Reply
+        </button>
+
+        <button class="action-btn" onclick="switchPage('compose')">
+          ↪ Forward
+        </button>
+
+        <button class="action-btn" onclick="showToast('Archived')">
+          Archive
+        </button>
+
+        <button class="action-btn" onclick="showToast('Moved to trash')">
+          Delete
+        </button>
+      </div>
+    </div>
+
+    <div class="suggestions-card">
+      <div class="suggestions-header">
+        <div class="suggestions-title">AI-Suggested Replies</div>
+
+        <div class="ai-badge">AI</div>
+      </div>
+
+      <div class="suggestion-item">
+        <span
+          >Thanks Alice! I'll review Sections 3 and 5 and send you my feedback
+          by Friday EOD. Looking forward to the board presentation.</span
+        >
+
+        <button class="use-btn" onclick="switchPage('compose')">Use</button>
+      </div>
+
+      <div class="suggestion-item">
+        <span
+          >Hi Alice, got it! I have a few initial thoughts - let's schedule a
+          15-min call tomorrow to align before I put everything in
+          writing?</span
+        >
+
+        <button class="use-btn" onclick="switchPage('compose')">Use</button>
+      </div>
+
+      <div class="suggestion-item">
+        <span
+          >Received, Alice. I'm slightly tied up until Thursday - would Thursday
+          evening work as the deadline instead of Friday?</span
+        >
+
+        <button class="use-btn" onclick="switchPage('compose')">Use</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endmacro %} {% if dashboard_embed|default(false) %} {{
+dashboard_message_view() }} {% else %} {% extends 'base.html' %} {% block
+extra_css %}
+<link rel="stylesheet" href="/static/css/message.css?v=theme-20260521" />
+<script src="/static/js/message_summary.js" defer></script>
+
+{% endblock %} {% block content %} {% set recent_messages =
+recent_messages|default([message]) %}
+
 <section class="message-view-page" data-message-id="{{ message_id }}">
   <div class="message-view-wrap">
     <div class="message-detail-topbar">
       <a href="{{ back_url }}" class="back-btn message-detail-back">← Back</a>
+
       <h1 class="message-detail-title">Message</h1>
     </div>
 
-    <div class="message-detail-shell">
-      <div class="summary-card message-detail-summary-card">
-        <div>
-          <div class="summary-badge message-detail-summary-badge">✦ AI Summary</div>
-          <h3 class="message-detail-summary-sender">{{ message.sender }}</h3>
-          <div
-            id="summary-text"
-            class="summary-text message-detail-summary-text"
-            data-state="{{ 'ready' if summary else 'loading' }}"
-            data-summary-url="{{ url_for('nlp.summarize') }}"
-            data-subject="{{ message.subject }}"
-            data-sender="{{ message.sender }}"
-            data-body="{{ message.body_text or message.body_html or '' }}"
+    <div class="message-detail-layout">
+      <aside class="message-mini-sidebar" aria-label="Message navigation">
+        <div class="message-mini-header">
+          <span>Messages</span>
+
+          <span class="message-mini-count">{{ recent_messages|length }}</span>
+        </div>
+
+        <div class="message-mini-list">
+          {% for item in recent_messages %}
+
+          <a
+            class="message-mini-item{% if item.id == message.id %} active{% endif %}"
+            href="{{ url_for('auth.message_view', message_id=item.id, page=back_page, folder=back_folder, channel=back_channel) }}"
           >
-            {% if summary %}
-              {{ summary }}
-            {% else %}
-              Generating summary...
+            <div class="message-mini-avatar">{{ item.avatar_initials }}</div>
+
+            <div class="message-mini-copy">
+              <div class="message-mini-row">
+                <strong>{{ item.sender }}</strong>
+
+                <time>{{ item.received_at }}</time>
+              </div>
+
+              <div class="message-mini-subject">{{ item.subject }}</div>
+
+              <p>{{ item.snippet }}</p>
+            </div>
+          </a>
+
+          {% endfor %}
+        </div>
+      </aside>
+
+      <div class="message-detail-shell">
+        <div class="summary-card message-detail-summary-card">
+          <div>
+            <div class="summary-badge message-detail-summary-badge">
+              ✦ AI Summary
+            </div>
+
+            <h3 class="message-detail-summary-sender">{{ message.sender }}</h3>
+
+            <div
+              id="summary-text"
+              class="summary-text message-detail-summary-text"
+              data-state="idle"
+              data-summary-url="/nlp/summarize"
+              data-subject="{{ message.subject }}"
+              data-sender="{{ message.sender }}"
+              data-body="{{ message.body_text }}"
+            >
+              {% if summary %} {{ summary }} {% else %} AI summary will appear
+              here once the summary API is wired. {% endif %}
+            </div>
+          </div>
+
+          <button
+            id="read-aloud-btn"
+            type="button"
+            class="read-aloud-btn message-detail-ghost-btn"
+          >
+            ▶ Read aloud
+          </button>
+        </div>
+
+        <div
+          class="message-card message-detail-card"
+          data-message-id="{{ message.id }}"
+        >
+          <div class="sender-row message-detail-sender-row">
+            <div class="sender-av message-detail-avatar">
+              {{ message.avatar_initials }}
+            </div>
+
+            <div class="sender-info message-detail-sender-info">
+              <div class="sender-name message-detail-sender-name">
+                {{ message.sender }}
+
+                <span class="msg-tag tag-email message-detail-channel-tag"
+                  >{{ message.channel }}</span
+                >
+              </div>
+
+              <div class="sender-email message-detail-address">
+                {{ message.sender_email }} → {{ message.to }}
+              </div>
+            </div>
+
+            <div class="msg-timestamp message-detail-timestamp">
+              {{ message.received_at }}
+            </div>
+          </div>
+
+          <div class="msg-subject-bar message-detail-subject">
+            {{ message.subject }}
+          </div>
+
+          <div id="message-body" class="msg-body-content message-detail-body">
+            {% if message.body_html %}
+
+            <iframe
+              class="message-html-frame"
+              title="Email message body"
+              sandbox="allow-same-origin"
+              referrerpolicy="no-referrer"
+              srcdoc="{{ message.body_html|e }}"
+            ></iframe>
+
+            {% elif message.body_text %} {% for paragraph in
+            message.body_text.split('\n\n') %}
+
+            <p>{{ paragraph }}</p>
+
+            {% endfor %} {% else %}
+
+            <p>Message body will appear here.</p>
+
             {% endif %}
           </div>
-        </div>
-        <button id="read-aloud-btn" type="button" class="read-aloud-btn message-detail-ghost-btn">▶ Read aloud</button>
-      </div>
 
-      <div class="message-card message-detail-card" data-message-id="{{ message.id }}">
-        <div class="sender-row message-detail-sender-row">
-          <div class="sender-av message-detail-avatar">{{ message.avatar_initials }}</div>
-          <div class="sender-info message-detail-sender-info">
-            <div class="sender-name message-detail-sender-name">
-              {{ message.sender }}
-              <span class="msg-tag tag-email message-detail-channel-tag">{{ message.channel }}</span>
-            </div>
-            <div class="sender-email message-detail-address">{{ message.sender_email }} → {{ message.to }}</div>
+          <div class="msg-actions-row message-detail-actions">
+            <button
+              id="reply-btn"
+              type="button"
+              class="action-btn primary message-detail-primary-btn"
+            >
+              ↩ Reply
+            </button>
+
+            <button
+              id="forward-btn"
+              type="button"
+              class="action-btn message-detail-secondary-btn"
+            >
+              ↪ Forward
+            </button>
+
+            <button
+              id="archive-btn"
+              type="button"
+              class="action-btn message-detail-secondary-btn"
+            >
+              Archive
+            </button>
+
+            <button
+              id="delete-btn"
+              type="button"
+              class="action-btn message-detail-secondary-btn message-detail-danger-btn"
+            >
+              Delete
+            </button>
           </div>
-          <div class="msg-timestamp message-detail-timestamp">{{ message.received_at }}</div>
         </div>
 
-        <div class="msg-subject-bar message-detail-subject">{{ message.subject }}</div>
-
-        <div id="message-body" class="msg-body-content message-detail-body">
-          {% if message.body_text %}
-            {% for paragraph in message.body_text.split('\n\n') %}
-              <p>{{ paragraph }}</p>
-            {% endfor %}
-          {% elif message.body_html %}
-            <pre class="message-detail-pre">{{ message.body_html }}</pre>
-          {% else %}
-            <p>Message body will appear here.</p>
-          {% endif %}
-        </div>
-
-        <div class="msg-actions-row message-detail-actions">
-          <button id="reply-btn" type="button" class="action-btn primary message-detail-primary-btn">↩ Reply</button>
-          <button id="forward-btn" type="button" class="action-btn message-detail-secondary-btn">↪ Forward</button>
-          <button id="archive-btn" type="button" class="action-btn message-detail-secondary-btn">Archive</button>
-          <button id="delete-btn" type="button" class="action-btn message-detail-secondary-btn message-detail-danger-btn">Delete</button>
-        </div>
-      </div>
-
-      <div class="suggestions-card message-detail-suggestions-card">
-        <div class="suggestions-header message-detail-suggestions-header">
-          <div class="suggestions-title message-detail-suggestions-title"><span class="message-detail-star">✦</span> AI-Suggested Replies</div>
-          <div class="ai-badge message-detail-ai-badge">AI</div>
-        </div>
-
-        <div id="suggestions-list" class="message-detail-suggestions-list">
-          {% for suggestion in suggestions %}
-            <div class="suggestion-item message-detail-suggestion-item">
-              <span class="message-detail-suggestion-text">{{ suggestion }}</span>
-              <button type="button" class="use-btn message-detail-use-btn">Use</button>
+        <div class="suggestions-card message-detail-suggestions-card">
+          <div class="suggestions-header message-detail-suggestions-header">
+            <div class="suggestions-title message-detail-suggestions-title">
+              <span class="message-detail-star">✦</span> AI-Suggested Replies
             </div>
-          {% endfor %}
+
+            <div class="ai-badge message-detail-ai-badge">AI</div>
+          </div>
+
+          <div id="suggestions-list" class="message-detail-suggestions-list">
+            {% for suggestion in suggestions %}
+
+            <div class="suggestion-item message-detail-suggestion-item">
+              <span class="message-detail-suggestion-text"
+                >{{ suggestion }}</span
+              >
+
+              <button type="button" class="use-btn message-detail-use-btn">
+                Use
+              </button>
+            </div>
+
+            {% endfor %}
+          </div>
         </div>
       </div>
     </div>
   </div>
 </section>
-{% endblock %}
+
+{% endblock %} {% endif %}

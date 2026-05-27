@@ -9,6 +9,7 @@ The project is a Flask-based voice-enabled email and messaging assistant. It has
 ## What has been implemented so far
 
 ### 1. Core Flask application
+
 - `run.py` imports `app` from `src.app` and runs the server on `0.0.0.0:5000`.
 - `src/app.py` defines `create_app()` and registers the following blueprints:
   - `auth_bp` from `src/web/auth_routes`
@@ -19,6 +20,7 @@ The project is a Flask-based voice-enabled email and messaging assistant. It has
 - `src/db.py` initializes Flask-SQLAlchemy and runs `db.create_all()` inside app context. It also supports a lightweight SQLite schema migration for `user_tokens.account_email`.
 
 ### 2. Authentication and Google OAuth
+
 - `src/web/auth_routes.py` implements:
   - `/auth/login` (GET+POST)
   - `/auth/signup` (GET+POST)
@@ -36,11 +38,13 @@ The project is a Flask-based voice-enabled email and messaging assistant. It has
 - Gmail connection logic stores refreshable Gmail tokens in `UserToken` records and supports reconnect/disconnect behavior.
 
 ### 3. Database and models
+
 - `src/models/__init__.py` is currently empty.
 - Code and tests import `User` and `UserToken` from `src.models`, but the actual model classes are not defined in the current repository state.
 - This is an important gap: the app structure assumes SQLAlchemy models, but they are not present yet.
 
 ### 4. Gmail email service integration
+
 - `src/services/email_service.py` implements Gmail-specific behavior:
   - `list_emails()` lists Gmail messages and normalizes message payloads
   - `read_email()` fetches a single Gmail message
@@ -50,6 +54,7 @@ The project is a Flask-based voice-enabled email and messaging assistant. It has
 - The service includes robust Gmail API error handling, body extraction, and MIME parsing logic.
 
 ### 5. Email and API routes
+
 - `src/web/email_routes.py` provides:
   - `/email/send`
   - `/email/list`
@@ -62,6 +67,7 @@ The project is a Flask-based voice-enabled email and messaging assistant. It has
 - Request payload validation is implemented for `to`, `body`, and optional `subject` fields.
 
 ### 6. NLP endpoints and placeholder logic
+
 - `src/web/nlp_routes.py` exposes:
   - `/nlp/summarize`
   - `/nlp/suggest`
@@ -69,11 +75,13 @@ The project is a Flask-based voice-enabled email and messaging assistant. It has
 - The NLP service currently returns placeholder text and suggestions rather than live model output.
 
 ### 7. Voice transcription support
+
 - `src/services/voice.py` defines `transcribe_audio()`.
 - It attempts to import `whisper`, load the `tiny` model, and transcribe audio if available.
 - If `whisper` is unavailable, it returns a placeholder transcription message.
 
 ### 8. Frontend templates and UI state
+
 - `templates/base.html` provides a shared layout with conditional nav links for authenticated users.
 - `templates/login.html` and `templates/signup.html` are fully styled auth pages with form validation and Google sign-in.
 - `templates/dashboard.html` is a large frontend shell containing:
@@ -86,6 +94,7 @@ The project is a Flask-based voice-enabled email and messaging assistant. It has
 - `templates/message_view.html` renders a message detail page with AI summary, actions, and suggested replies.
 
 ### 9. Static JavaScript and UI behavior
+
 - `static/js/dashboard.js` implements dashboard interactions including:
   - inbox loading, empty/disconnected/error states
   - inbox message rendering
@@ -96,6 +105,7 @@ The project is a Flask-based voice-enabled email and messaging assistant. It has
 - There is a small amount of inline script in `dashboard.html` for settings tab switching and profile photo preview.
 
 ### 10. Tests and fixtures
+
 - `tests/conftest.py` configures an in-memory SQLite test database and a Flask `client` fixture.
 - Key test files include:
   - `tests/test_auth_phase1.py` for auth flows, Google OAuth, Gmail connect/disconnect, dashboard/settings rendering, and message view redirects
@@ -108,6 +118,7 @@ The project is a Flask-based voice-enabled email and messaging assistant. It has
 ## Current status and next focus areas
 
 ### Implemented and present
+
 - Flask app startup and route registration
 - Auth pages, login/signup flows, and Google OAuth stubs
 - Gmail OAuth and Gmail API service integration logic
@@ -118,6 +129,7 @@ The project is a Flask-based voice-enabled email and messaging assistant. It has
 - Comprehensive route-level tests for auth, email, and NLP behavior
 
 ### Missing or incomplete items
+
 - The `src/models` package has no defined SQLAlchemy model classes.
 - Without `User` and `UserToken` model definitions, the app cannot persist users or Gmail token records as expected.
 - No routes currently exist for Gmail reconnect/disconnect beyond the basic `/api/channels/gmail` POST/DELETE and settings display.
@@ -126,6 +138,7 @@ The project is a Flask-based voice-enabled email and messaging assistant. It has
 - No dedicated `templates/settings.html` file is used; settings are rendered inside `dashboard.html`.
 
 ## Notes
+
 - The project currently has a strong skeleton around auth, Gmail integration, and UI structure.
 - The most important next step is to add model definitions for `User` and `UserToken` and verify the database schema.
 - After models are added, the app will be ready to wire live Gmail OAuth data and complete the message/inbox UI integration.

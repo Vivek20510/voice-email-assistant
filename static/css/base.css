@@ -1,0 +1,428 @@
+/* ==========================================================
+   BASE.CSS — Design tokens · Reset · Global utilities
+   ========================================================== */
+
+/* ── Google Fonts ── */
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap");
+
+/* ── Design Tokens ── */
+:root {
+  /* Palette */
+  --ink-50: #f1f2f4;
+  --ink-100: #d8dae0;
+  --ink-200: #b0b5bf;
+  --ink-300: #878d9a;
+  --ink-400: #636a78;
+  --ink-500: #4a5162;
+  --ink-600: #353c4e;
+  --ink-700: #242b3b;
+  --ink-800: #161c2a;
+  --ink-900: #0d1117;
+
+  --paper: #fafbfc;
+  --paper-2: #f4f5f7;
+  --paper-3: #edeef1;
+  --white: #ffffff;
+
+  --accent: #2563eb;
+  --accent-light: #eff4ff;
+  --accent-hover: #1d4ed8;
+  --accent-muted: rgba(37, 99, 235, 0.12);
+
+  --success: #16a34a;
+  --success-light: #f0fdf4;
+  --danger: #dc2626;
+  --danger-light: #fef2f2;
+  --warning: #d97706;
+  --warning-light: #fffbeb;
+
+  /* Typography */
+  --font: "DM Sans", system-ui, sans-serif;
+  --font-mono: "DM Mono", "Fira Code", monospace;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(13, 17, 23, 0.04);
+  --shadow-sm:
+    0 1px 4px rgba(13, 17, 23, 0.06), 0 2px 8px rgba(13, 17, 23, 0.04);
+  --shadow-md:
+    0 4px 12px rgba(13, 17, 23, 0.08), 0 2px 4px rgba(13, 17, 23, 0.04);
+  --shadow-lg:
+    0 10px 28px rgba(13, 17, 23, 0.1), 0 4px 8px rgba(13, 17, 23, 0.05);
+  --shadow-xl:
+    0 20px 48px rgba(13, 17, 23, 0.14), 0 8px 16px rgba(13, 17, 23, 0.06);
+
+  /* Transitions */
+  --ease-ui: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 350ms;
+
+  /* Z-index scale */
+  --z-base: 1;
+  --z-sticky: 10;
+  --z-overlay: 100;
+  --z-modal: 200;
+  --z-toast: 300;
+}
+
+/* ── Reset ── */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  tab-size: 4;
+}
+
+body {
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-900);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button {
+  font-family: var(--font);
+}
+input,
+textarea,
+select {
+  font-family: var(--font);
+  font-size: inherit;
+}
+
+img,
+svg {
+  display: block;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ink-100);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-200);
+}
+
+/* ── No blinking caret on non-inputs ── */
+*:not(input):not(textarea):not([contenteditable="true"]) {
+  caret-color: transparent;
+}
+
+/* ── Utility: visually hidden ── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Utility: truncate ── */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ────────────────────────────────────────────
+   TOAST
+──────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: var(--space-6);
+  right: var(--space-6);
+  z-index: var(--z-toast);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 240px;
+  max-width: 380px;
+  padding: 12px 18px;
+  background: var(--ink-900);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xl);
+  animation: toast-in var(--dur-base) var(--ease-ui);
+}
+
+.toast.toast--success {
+  background: #15803d;
+}
+.toast.toast--danger {
+  background: var(--danger);
+}
+.toast.toast--warning {
+  background: var(--warning);
+}
+
+.toast.out {
+  animation: toast-out var(--dur-base) var(--ease-ui) forwards;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+}
+
+/* ────────────────────────────────────────────
+   MODAL
+──────────────────────────────────────────── */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: rgba(13, 17, 23, 0.45);
+  backdrop-filter: blur(6px);
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.is-open {
+  display: flex;
+}
+
+.modal-content {
+  background: var(--white);
+  width: min(380px, calc(100vw - 32px));
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  animation: modal-in var(--dur-slow) var(--ease-ui);
+}
+
+.modal-content h3 {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink-900);
+  margin-bottom: var(--space-4);
+}
+
+.modal-content label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-1);
+}
+
+.modal-content input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--ink-100);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  color: var(--ink-900);
+  font-size: 14px;
+  outline: none;
+  transition:
+    border-color var(--dur-fast),
+    box-shadow var(--dur-fast);
+}
+
+.modal-content input:focus {
+  border-color: var(--accent);
+  background: var(--white);
+  box-shadow: 0 0 0 3px var(--accent-muted);
+}
+
+.modal-content button {
+  margin-top: var(--space-5);
+  width: 100%;
+  padding: 11px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--ink-900);
+  color: var(--white);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast);
+}
+
+.modal-content button:hover {
+  background: var(--ink-700);
+}
+
+.close {
+  float: right;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--ink-300);
+  transition: color var(--dur-fast);
+}
+.close:hover {
+  color: var(--ink-900);
+}
+
+.validation-error {
+  display: none;
+  color: var(--danger);
+  font-size: 12px;
+  margin-top: var(--space-1);
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ────────────────────────────────────────────
+   DROPDOWN
+──────────────────────────────────────────── */
+.tool-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 190px;
+  background: var(--white);
+  border: 1px solid var(--ink-50);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-overlay);
+  overflow: hidden;
+  animation: dropdown-in var(--dur-fast) var(--ease-ui);
+}
+
+.dropdown-menu.is-open {
+  display: block;
+}
+
+.dropdown-menu div {
+  padding: 10px 14px;
+  font-size: 13.5px;
+  color: var(--ink-700);
+  cursor: pointer;
+  transition: background var(--dur-fast);
+}
+.dropdown-menu div:hover {
+  background: var(--paper-2);
+}
+
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ────────────────────────────────────────────
+   BADGE PILL (shared)
+──────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1.6;
+}
+
+.badge--dark {
+  background: var(--ink-900);
+  color: var(--white);
+}
+.badge--accent {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+.badge--success {
+  background: var(--success-light);
+  color: var(--success);
+}
+.badge--danger {
+  background: var(--danger-light);
+  color: var(--danger);
+}
+.badge--muted {
+  background: var(--paper-2);
+  color: var(--ink-500);
+}

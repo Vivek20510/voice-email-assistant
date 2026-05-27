@@ -114,3 +114,30 @@ class EmailMessage(db.Model):
 
     def __repr__(self):
         return f"<EmailMessage id={self.id} user_id={self.user_id}>"
+
+
+class ReadMessage(db.Model):
+    """Local read-state marker for provider messages."""
+
+    __tablename__ = "read_messages"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    channel = db.Column(db.String(64), nullable=False)
+    message_id = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        db.UniqueConstraint(
+            "user_id",
+            "channel",
+            "message_id",
+            name="uq_read_messages_user_channel_message",
+        ),
+    )
+
+    def __repr__(self):
+        return (
+            f"<ReadMessage user_id={self.user_id} "
+            f"channel={self.channel} message_id={self.message_id}>"
+        )
