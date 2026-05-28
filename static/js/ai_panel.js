@@ -1,8 +1,31 @@
 const AIPanel = (() => {
   const history = [];
+  let isLoading = false;
+  let lastSubmittedQuery = "";
+  let latestAssistantTurn = null;
 
   const inputEl = () => document.getElementById("ai-input");
   const resultsEl = () => document.getElementById("ai-results");
+  const sendBtnEl = () => document.getElementById("ai-send-btn");
+  const clearBtnEl = () => document.getElementById("ai-clear-btn");
+
+  function emptyStateMarkup() {
+    return `
+      <div class="ai-placeholder">Ask about the app or your inbox.</div>
+
+      <div class="ai-empty" id="ai-empty">
+        <div class="ai-empty-icon">AI</div>
+
+        <div class="ai-empty-text">
+          Get app guidance,<br />
+
+          navigation help, summaries,<br />
+
+          filters, and draft support.
+        </div>
+      </div>
+    `;
+  }
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -34,8 +57,45 @@ const AIPanel = (() => {
     return item;
   }
 
+  function setStarted() {
+    const results = resultsEl();
+    if (!results.dataset.started) {
+      results.innerHTML = "";
+      results.dataset.started = "true";
+    }
+  }
+
+  function setLoadingState(nextLoading) {
+    isLoading = nextLoading;
+    const sendButton = sendBtnEl();
+    const input = inputEl();
+    const clearButton = clearBtnEl();
+
+    if (sendButton) sendButton.disabled = nextLoading;
+    if (input) input.disabled = nextLoading;
+    if (clearButton) clearButton.disabled = nextLoading;
+
+    if (typeof resultsEl().querySelectorAll === "function") {
+      resultsEl().querySelectorAll(".ai-regenerate-btn").forEach((button) => {
+        button.disabled = nextLoading;
+      });
+    }
+  }
+
   function showLoading() {
-    appendTurn("assistant", `<div class="ai-loading">Thinking...</div>`);
+    appendTurn(
+      "assistant",
+      `
+        <div class="ai-loading" aria-live="polite">
+          <span>Thinking</span>
+          <span class="ai-loading-dots" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+        </div>
+      `,
+    );
   }
 
   function clearLoading() {
@@ -49,6 +109,19 @@ const AIPanel = (() => {
   function showError(msg) {
     clearLoading();
     appendTurn("assistant", `<div class="ai-error">${escapeHtml(msg)}</div>`);
+  }
+
+  function trimLatestHistoryPair(query) {
+    const assistantTurn = history[history.length - 1];
+    const userTurn = history[history.length - 2];
+    if (
+      assistantTurn?.role === "assistant" &&
+      userTurn?.role === "user" &&
+      userTurn.content === query
+    ) {
+      history.pop();
+      history.pop();
+    }
   }
 
   async function waitForEmails() {
@@ -223,39 +296,84 @@ const AIPanel = (() => {
         if (action) executeAction(action);
       });
     });
+
+    container.querySelectorAll(".ai-copy-btn").forEach((button) => {
+      button.addEventListener("click", async () => {
+        await copyText(data.response || "");
+        const originalLabel = button.textContent;
+        button.textContent = "Copied";
+        setTimeout(() => {
+          button.textContent = originalLabel;
+        }, 1200);
+      });
+    });
+
+    container.querySelectorAll(".ai-regenerate-btn").forEach((button) => {
+      button.addEventListener("click", () => {
+        regenerateLastAnswer();
+      });
+    });
   }
 
-  function renderAssistant(data) {
+  function refreshRegenerateButtons() {
+    if (typeof resultsEl().querySelectorAll !== "function") return;
+    resultsEl().querySelectorAll(".ai-regenerate-btn").forEach((button) => {
+      const turn = button.closest(".ai-turn");
+      button.hidden = turn !== latestAssistantTurn;
+      button.disabled = isLoading || turn !== latestAssistantTurn;
+    });
+  }
+
+  async function copyText(text) {
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return;
+      } catch {
+        // Fall back to the hidden textarea path below.
+      }
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    textarea.remove();
+  }
+
+  function renderAssistant(data, options = {}) {
     clearLoading();
     const cards = Array.isArray(data.cards) ? data.cards : data.emails || [];
     const text = data.response || "No response from server.";
     const container = appendTurn(
       "assistant",
       `
-        <div class="ai-response">${formatText(text)}</div>
+        <div class="ai-response">
+          <div class="ai-response-body">${formatText(text)}</div>
+          <div class="ai-response-toolbar">
+            <button class="ai-tool-btn ai-copy-btn" type="button" title="Copy response">Copy</button>
+            <button class="ai-tool-btn ai-regenerate-btn" type="button" title="Regenerate answer">Regenerate</button>
+          </div>
+        </div>
         ${renderCards(cards)}
         ${renderActions(data.actions)}
       `,
     );
+    if (options.trackLatest !== false) {
+      latestAssistantTurn = container;
+    }
     bindRenderedControls(container, data);
+    refreshRegenerateButtons();
   }
 
-  async function sendQuery() {
-    const input = inputEl();
-    const query = input.value.trim();
-    if (!query) return;
-
-    resultsEl().dataset = resultsEl().dataset || {};
-    if (!resultsEl().dataset.started) {
-      resultsEl().innerHTML = "";
-      resultsEl().dataset.started = "true";
-    }
-
-    appendTurn(
-      "user",
-      `<div class="ai-user-bubble">${formatText(query)}</div>`,
-    );
-    input.value = "";
+  async function submitQuery(query, options = {}) {
+    if (isLoading || !query) return;
+    setStarted();
+    setLoadingState(true);
     showLoading();
 
     try {
@@ -268,13 +386,58 @@ const AIPanel = (() => {
       renderAssistant(data);
       history.push({ role: "user", content: query });
       history.push({ role: "assistant", content: data.response || "" });
+      lastSubmittedQuery = query;
 
       if (Array.isArray(data.actions)) {
         data.actions.forEach((action) => executeAction(action));
       }
     } catch (err) {
       showError(err.message || "Server error");
+    } finally {
+      setLoadingState(false);
+      if (!options.keepInputDisabled) {
+        inputEl()?.focus();
+      }
     }
+  }
+
+  async function sendQuery() {
+    const input = inputEl();
+    if (isLoading || !input) return;
+    const query = input.value.trim();
+    if (!query) return;
+
+    setStarted();
+    appendTurn(
+      "user",
+      `<div class="ai-user-bubble">${formatText(query)}</div>`,
+    );
+    input.value = "";
+    await submitQuery(query);
+  }
+
+  async function regenerateLastAnswer() {
+    if (isLoading || !lastSubmittedQuery || !latestAssistantTurn) return;
+
+    trimLatestHistoryPair(lastSubmittedQuery);
+    latestAssistantTurn.remove();
+    latestAssistantTurn = null;
+    await submitQuery(lastSubmittedQuery);
+  }
+
+  function clearConversation() {
+    if (isLoading) return;
+    history.length = 0;
+    lastSubmittedQuery = "";
+    latestAssistantTurn = null;
+    resultsEl().innerHTML = emptyStateMarkup();
+    delete resultsEl().dataset.started;
+    const input = inputEl();
+    if (input) {
+      input.value = "";
+      input.focus();
+    }
+    refreshRegenerateButtons();
   }
 
   function handleKey(event) {
@@ -293,6 +456,8 @@ const AIPanel = (() => {
     sendQuery,
     handleKey,
     prefill,
+    clearConversation,
+    regenerateLastAnswer,
     history,
   };
 })();
@@ -311,4 +476,8 @@ function handleAiKey(event) {
 
 function prefillAi(text) {
   AIPanel.prefill(text);
+}
+
+function clearAiConversation() {
+  AIPanel.clearConversation();
 }

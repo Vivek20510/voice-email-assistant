@@ -10,6 +10,16 @@
 
         <div class="ai-panel-sub">App help, navigation, and inbox insights</div>
       </div>
+
+      <button
+        class="ai-header-btn"
+        id="ai-clear-btn"
+        type="button"
+        onclick="clearAiConversation()"
+        title="Clear conversation"
+      >
+        Clear
+      </button>
     </div>
 
     <!-- ✅ Input Box -->
@@ -19,11 +29,20 @@
         type="text"
         class="ai-search-input"
         id="ai-input"
-        placeholder="Ask about the app, compose, or inbox..."
+        name="ai_query"
+        placeholder="Message AI Assistant..."
+        autocomplete="new-password"
+        spellcheck="true"
         onkeydown="handleAiKey(event)"
       />
 
-      <button class="ai-send-btn" onclick="sendAiQuery()" title="Send">
+      <button
+        class="ai-send-btn"
+        id="ai-send-btn"
+        type="button"
+        onclick="sendAiQuery()"
+        title="Send"
+      >
         ↑
       </button>
     </div>
