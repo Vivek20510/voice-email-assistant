@@ -1,30 +1,39 @@
 <!doctype html>
+
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <title>Dashboard</title>
+
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/style.css') }}"
     />
   </head>
+
   <body>
     <div
       id="dashboard-state"
       data-initial-page="{{ initial_page }}"
       data-initial-tab="{{ initial_tab }}"
     ></div>
+
     <div id="screen-app" class="screen">
       <!-- TOP NAV -->
+
       <nav class="topnav">
         <div class="nav-brand">
           <div class="nav-brand-mark">✉</div>
+
           <span class="nav-brand-name">Voice Mail</span>
         </div>
 
         <div class="nav-search">
           <span class="search-ico">⌕</span>
+
           <input
             type="text"
             placeholder="Search messages, people, channels…"
@@ -33,55 +42,74 @@
         </div>
 
         <div class="nav-right">
-          <div class="nav-divider"></div>
           <button
             class="nav-btn notif-badge"
             onclick="showToast('No new notifications')"
           >
             🔔
           </button>
-          <button
-            class="nav-btn"
-            id="nav-settings"
-            onclick="switchPage('settings')"
-          >
+
+          <button class="nav-btn" onclick="switchPage('settings')">
             ⚙ Settings
           </button>
-          <div class="nav-avatar" title="Profile — {{ user.name }}">
+
+          <!-- ✅ PROFILE -->
+
+          <div class="nav-avatar" id="profileToggle">
+            <!-- SMALL AVATAR -->
+
             <img
               src="{{ user.profile_photo or url_for('static', filename='img/default-avatar.png') }}"
-              alt="Profile"
               class="avatar-img"
+              alt="Profile"
             />
+
+            <!-- ✅ POPUP PROFILE CARD -->
+
+            <div class="profile-card" id="profileCard">
+              <h3>User Profile</h3>
+
+              <img
+                src="{{ user.profile_photo or url_for('static', filename='img/default-avatar.png') }}"
+                class="profile-avatar-large"
+                alt="Profile"
+              />
+
+              <div class="profile-name">{{ user.name }}</div>
+
+              <div class="profile-email">{{ user.email }}</div>
+            </div>
           </div>
         </div>
       </nav>
 
       <div class="app-body">
         <!-- SIDEBAR -->
+
         <aside class="sidebar">
           <button class="sidebar-compose" onclick="switchPage('compose')">
             ✦ Compose
           </button>
 
           <div class="sidebar-label">Mail</div>
+
           <div
             class="sidebar-item active"
             id="sb-inbox"
-            onclick="switchPage('dashboard')"
+            onclick="switchSidebar('sb-inbox')"
           >
-            <span>Inbox</span><span class="sidebar-badge">12</span>
+            <span>Inbox</span
+            ><span id="inbox-unread-badge" class="sidebar-badge" hidden>0</span>
           </div>
+
           <div
             class="sidebar-item"
             id="sb-draft"
             onclick="switchSidebar('sb-draft')"
           >
             Draft
-            <span class="sidebar-badge" style="background: var(--ink-300)"
-              >3</span
-            >
           </div>
+
           <div
             class="sidebar-item"
             id="sb-sent"
@@ -89,6 +117,7 @@
           >
             Sent
           </div>
+
           <div
             class="sidebar-item"
             id="sb-archive"
@@ -96,6 +125,7 @@
           >
             Archive
           </div>
+
           <div
             class="sidebar-item"
             id="sb-trash"
@@ -105,7 +135,9 @@
           </div>
 
           <div class="sidebar-divider"></div>
+
           <div class="sidebar-label">Channels</div>
+
           <div
             class="sidebar-item"
             id="sb-emails"
@@ -113,6 +145,7 @@
           >
             📧 Email
           </div>
+
           <div
             class="sidebar-item"
             id="sb-whatsapp"
@@ -120,6 +153,7 @@
           >
             💬 WhatsApp
           </div>
+
           <div
             class="sidebar-item"
             id="sb-telegram"
@@ -127,6 +161,7 @@
           >
             ✈ Telegram
           </div>
+
           <div
             class="sidebar-item"
             id="sb-outlook"
@@ -136,7 +171,9 @@
           </div>
 
           <div class="sidebar-divider"></div>
+
           <div class="sidebar-label">Labels</div>
+
           <div
             class="sidebar-item"
             id="sb-work"
@@ -144,6 +181,7 @@
           >
             Work
           </div>
+
           <div
             class="sidebar-item"
             id="sb-personal"
@@ -151,6 +189,7 @@
           >
             Personal
           </div>
+
           <div
             class="sidebar-item"
             id="sb-promos"
@@ -163,14 +202,17 @@
             <div class="va-status-top">
               <span class="va-dot"></span> Voice Assistant
             </div>
+
             <div class="va-sub">Online · Ready to help</div>
           </div>
         </aside>
 
         <!-- PAGE: DASHBOARD -->
+
         <div id="page-dashboard" class="page-content active">
-          <div class="inbox-toolbar">
+          <div id="dashboard-toolbar" class="inbox-toolbar">
             <h1 id="dashboard-title">Inbox</h1>
+
             <div id="dashboard-toolbar-actions" class="inbox-toolbar-actions">
               <button
                 class="tool-btn"
@@ -178,567 +220,58 @@
               >
                 ✓ Mark all read
               </button>
-              <button class="tool-btn" onclick="showToast('Sort options')">
-                ↕ Sort
-              </button>
-              <button class="tool-btn" onclick="showToast('Filter options')">
-                ⊟ Filter
-              </button>
+
+              <div class="tool-dropdown">
+                <button class="tool-btn" onclick="toggleMenu('sortMenu')">
+                  ↕ Sort
+                </button>
+
+                <div id="sortMenu" class="dropdown-menu">
+                  <div onclick="applySort('newest')">Newest first</div>
+
+                  <div onclick="applySort('oldest')">Oldest first</div>
+
+                  <div onclick="applySort('sender')">Sender (A–Z)</div>
+                </div>
+              </div>
+
+              <div class="tool-dropdown">
+                <button class="tool-btn" onclick="toggleMenu('filterMenu')">
+                  ⊟ Filter
+                </button>
+
+                <div id="filterMenu" class="dropdown-menu">
+                  <div onclick="applyFilter('unread')">Unread</div>
+
+                  <div onclick="applyFilter('unread')">Starred</div>
+
+                  <div onclick="applyFilter('unread')">Today</div>
+                </div>
+              </div>
             </div>
           </div>
 
           <div id="dashboard-body" class="dashboard-body">
             <!-- LEFT: Inbox / Message List -->
+
             <div class="dashboard-main">
               <div id="inbox-content">
                 <div class="inbox-feedback" data-state="loading">
                   <h3>Loading inbox...</h3>
+
                   <p>Fetching your latest Gmail messages.</p>
                 </div>
               </div>
             </div>
 
-            <!-- RIGHT: AI SUMMARY PANEL -->
-            <div id="dashboard-ai-panel" class="dashboard-side">
-              <div class="ai-search-panel" id="ai-search-panel">
-                <div class="ai-panel-header">
-                  <div>
-                    <div class="ai-panel-title">✦ AI Summary</div>
-                    <div class="ai-panel-sub">
-                      Quick insights from your inbox
-                    </div>
-                  </div>
-                </div>
-
-                <div class="ai-search-box">
-                  <input
-                    type="text"
-                    class="ai-search-input"
-                    id="ai-input"
-                    placeholder="Ask AI to summarise, find, or filter…"
-                    onkeydown="handleAiKey(event)"
-                  />
-                  <button
-                    class="ai-send-btn"
-                    onclick="sendAiQuery()"
-                    title="Send"
-                  >
-                    ↑
-                  </button>
-                </div>
-
-                <div class="ai-chips">
-                  <div
-                    class="ai-chip"
-                    onclick="prefillAi('Summarise unread emails')"
-                  >
-                    Having Attachments
-                  </div>
-                  <div
-                    class="ai-chip"
-                    onclick="prefillAi('Important emails today')"
-                  >
-                    Important today
-                  </div>
-                  <div class="ai-chip" onclick="prefillAi('Action items')">
-                    From Vivek
-                  </div>
-                </div>
-
-                <div class="ai-results-area" id="ai-results">
-                  <div class="ai-empty" id="ai-empty">
-                    <div class="ai-empty-icon">✦</div>
-                    <div class="ai-empty-text">
-                      Get instant summaries,<br />
-                      action items, and insights<br />
-                      from your inbox.
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {% include 'ai_panel.html' %}
           </div>
         </div>
 
-        <!-- PAGE: VOICEMAIL VIEW -->
-        <div id="page-voicemail" class="page-content">
-          <div class="inbox-toolbar">
-            <button class="back-btn" onclick="switchPage('dashboard')">
-              ← Back
-            </button>
-            <h1>Message</h1>
-          </div>
-
-          <div class="msgview-wrap">
-            <div class="summary-card">
-              <div>
-                <div class="summary-badge">AI Summary</div>
-                <h3>Alice Rodriguez</h3>
-                <div class="summary-text">
-                  Alice is requesting feedback on the Q3 report by end of
-                  Friday. Action required: review the attached document and
-                  reply with comments before the deadline.
-                </div>
-              </div>
-              <button
-                class="read-aloud-btn"
-                onclick="showToast('▶ Reading aloud…')"
-              >
-                ▶ Read aloud
-              </button>
-            </div>
-
-            <div class="message-card">
-              <div class="sender-row">
-                <div class="sender-av">AR</div>
-                <div class="sender-info">
-                  <div class="sender-name">
-                    Alice Rodriguez
-                    <span class="msg-tag tag-email">Email</span>
-                  </div>
-                  <div class="sender-email">
-                    alice@company.com → priya@company.com
-                  </div>
-                </div>
-                <div class="msg-timestamp">Today, 10:42 AM</div>
-              </div>
-
-              <div class="msg-subject-bar">
-                Q3 Report Review — Feedback Needed
-              </div>
-
-              <div class="msg-body-content">
-                <p>Hi Priya,</p>
-                <p>
-                  Please find attached the Q3 summary report. I've highlighted
-                  the key metrics and areas where I need your input before we
-                  present to the board next Monday.
-                </p>
-                <p>
-                  Specifically, I'd appreciate your review of the revenue
-                  forecast assumptions in Section 3 and the risk matrix in
-                  Section 5. Your expertise in those areas would be invaluable.
-                </p>
-                <p>
-                  Could you please send me your feedback by EOD this Friday?
-                  This gives us the weekend to incorporate comments before the
-                  final presentation.
-                </p>
-                <p>Best regards,<br />Alice</p>
-              </div>
-
-              <div class="msg-actions-row">
-                <button
-                  class="action-btn primary"
-                  onclick="switchPage('compose')"
-                >
-                  ↩ Reply
-                </button>
-                <button class="action-btn" onclick="switchPage('compose')">
-                  ↪ Forward
-                </button>
-                <button class="action-btn" onclick="showToast('Archived')">
-                  Archive
-                </button>
-                <button
-                  class="action-btn"
-                  onclick="showToast('Moved to trash')"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-
-            <div class="suggestions-card">
-              <div class="suggestions-header">
-                <div class="suggestions-title">AI-Suggested Replies</div>
-                <div class="ai-badge">AI</div>
-              </div>
-
-              <div class="suggestion-item">
-                <span
-                  >Thanks Alice! I'll review Sections 3 and 5 and send you my
-                  feedback by Friday EOD. Looking forward to the board
-                  presentation.</span
-                >
-                <button class="use-btn" onclick="switchPage('compose')">
-                  Use
-                </button>
-              </div>
-
-              <div class="suggestion-item">
-                <span
-                  >Hi Alice, got it! I have a few initial thoughts — let's
-                  schedule a 15-min call tomorrow to align before I put
-                  everything in writing?</span
-                >
-                <button class="use-btn" onclick="switchPage('compose')">
-                  Use
-                </button>
-              </div>
-
-              <div class="suggestion-item">
-                <span
-                  >Received, Alice. I'm slightly tied up until Thursday — would
-                  Thursday evening work as the deadline instead of Friday?</span
-                >
-                <button class="use-btn" onclick="switchPage('compose')">
-                  Use
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- PAGE: SETTINGS -->
-        <div id="page-settings" class="page-content">
-          <div class="settings-layout">
-            <div class="settings-nav">
-              <div class="settings-nav-header">Settings</div>
-
-              <div
-                class="settings-nav-item active"
-                onclick="switchSettingsTab(this, 'spanel-profile')"
-              >
-                👤 Profile
-              </div>
-
-              <div
-                class="settings-nav-item"
-                onclick="switchSettingsTab(this, 'spanel-voice')"
-              >
-                🎙 Voice Assistant
-              </div>
-
-              <div
-                class="settings-nav-item"
-                onclick="switchSettingsTab(this, 'spanel-notifications')"
-              >
-                🔔 Notifications
-              </div>
-
-              <div
-                class="settings-nav-item"
-                onclick="switchSettingsTab(this, 'spanel-channels')"
-              >
-                ⚡ Channels
-              </div>
-
-              <div
-                class="settings-nav-item"
-                onclick="switchSettingsTab(this, 'spanel-security')"
-              >
-                🔒 Privacy &amp; Security
-              </div>
-
-              <div
-                class="settings-nav-item"
-                onclick="switchSettingsTab(this, 'spanel-appearance')"
-              >
-                🎨 Appearance
-              </div>
-
-              <div class="settings-nav-spacer"></div>
-
-              <div class="settings-nav-footer">
-                <button class="btn-logout" onclick="confirmLogout()">
-                  → Sign Out
-                </button>
-              </div>
-            </div>
-
-            <div class="settings-content">
-              <!-- PROFILE TAB -->
-              <div id="spanel-profile" class="settings-section active">
-                <div class="profile-content">
-                  <div class="settings-section-title">Profile Settings</div>
-                  <div class="settings-section-desc">
-                    Manage your personal information and account details.
-                  </div>
-
-                  <div class="settings-card">
-                    <div class="profile-header">
-                      <div class="profile-left">
-                        <img
-                          id="profilePhoto"
-                          class="profile-avatar-lg"
-                          src="{{ user.profile_photo or url_for('static', filename='img/default-avatar.png') }}"
-                          alt="Profile Photo"
-                        />
-
-                        <div class="profile-info">
-                          <div class="profile-name">{{ user.name }}</div>
-                          <div class="profile-email">{{ user.email }}</div>
-                        </div>
-                      </div>
-
-                      <div class="profile-actions">
-                        <button
-                          class="btn-change-photo"
-                          onclick="openPhotoPicker()"
-                        >
-                          Change Photo
-                        </button>
-                      </div>
-
-                      <input
-                        type="file"
-                        id="photoInput"
-                        accept="image/*"
-                        hidden
-                        onchange="loadPhoto(event)"
-                      />
-                    </div>
-
-                    <div class="settings-row">
-                      <div class="settings-row-left">
-                        <div class="settings-row-label">Display Name</div>
-                        <div class="settings-row-desc">
-                          How your name appears to others
-                        </div>
-                      </div>
-                      <input
-                        type="text"
-                        class="settings-input-sm"
-                        value="Priya Sharma"
-                      />
-                    </div>
-
-                    <div class="settings-row">
-                      <div class="settings-row-left">
-                        <div class="settings-row-label">Email Address</div>
-                        <div class="settings-row-desc">
-                          This email is used for login and cannot be changed
-                        </div>
-                      </div>
-
-                      <div class="settings-value-readonly">
-                        {{ user.email }}
-                      </div>
-                    </div>
-
-                    <div class="settings-row">
-                      <div class="settings-row-left">
-                        <div class="settings-row-label">Phone Number</div>
-                        <div class="settings-row-desc">
-                          Used for WhatsApp and SMS
-                        </div>
-                      </div>
-                      <input
-                        type="text"
-                        class="settings-input-sm"
-                        value="+91 98765 43210"
-                      />
-                    </div>
-
-                    <div class="settings-row">
-                      <div class="settings-row-left">
-                        <div class="settings-row-label">Time Zone</div>
-                        <div class="settings-row-desc">
-                          For scheduling and timestamps
-                        </div>
-                      </div>
-                      <select class="settings-select-sm">
-                        <option>IST (UTC+5:30)</option>
-                        <option>UTC</option>
-                        <option>PST</option>
-                        <option>EST</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div class="settings-save-row">
-                    <button class="btn-save">Save Changes</button>
-                    <button class="btn-cancel">Cancel</button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- OTHER TABS (REQUIRED) -->
-              <div id="spanel-voice" class="settings-section">
-                Voice settings
-              </div>
-              <div id="spanel-notifications" class="settings-section">
-                Notification settings
-              </div>
-              <!-- Channels Section -->
-              <div id="spanel-channels" class="settings-section">
-                <div class="settings-section-title">Connected Channels</div>
-                <div class="settings-section-desc">
-                  Manage your messaging integrations.
-                </div>
-                {% if gmail_error %}
-                <div class="settings-card" role="alert">
-                  <div class="settings-row">
-                    <div class="settings-row-left">
-                      <div class="settings-row-label">
-                        Gmail connection failed
-                      </div>
-                      <div class="settings-row-desc">{{ gmail_error }}</div>
-                    </div>
-                  </div>
-                </div>
-                {% endif %} {% if gmail_success %}
-                <div class="settings-card" role="status">
-                  <div class="settings-row">
-                    <div class="settings-row-left">
-                      <div class="settings-row-label">Gmail update</div>
-                      <div class="settings-row-desc">{{ gmail_success }}</div>
-                    </div>
-                  </div>
-                </div>
-                {% endif %}
-
-                <div class="settings-card">
-                  <!-- Gmail -->
-                  <div class="settings-row">
-                    <div class="settings-row-left">
-                      <div class="settings-row-label">📧 Gmail</div>
-
-                      {% if gmail_connected %}
-                      <div class="settings-row-desc">
-                        {{ gmail_email if gmail_email else 'Connected' }}
-                      </div>
-                      {% else %}
-                      <div class="settings-row-desc">Not connected</div>
-                      {% endif %}
-                    </div>
-
-                    {% if gmail_connected %}
-                    <form
-                      method="post"
-                      action="{{ url_for('channels.disconnect_gmail') }}"
-                      style="margin: 0"
-                    >
-                      <button
-                        type="submit"
-                        class="btn-cancel"
-                        style="font-size: 12px"
-                      >
-                        Disconnect Gmail
-                      </button>
-                    </form>
-                    {% else %}
-                    <a
-                      href="{{ url_for('auth.gmail_connect', next='settings') }}"
-                      class="btn-save"
-                      style="
-                        padding: 6px 14px;
-                        font-size: 12px;
-                        text-decoration: none;
-                      "
-                    >
-                      Connect Gmail
-                    </a>
-                    {% endif %}
-                  </div>
-
-                  <!-- WhatsApp -->
-                  <div class="settings-row">
-                    <div class="settings-row-left">
-                      <div class="settings-row-label">💬 WhatsApp</div>
-                      <div class="settings-row-desc">Not connected</div>
-                    </div>
-
-                    <button
-                      class="btn-save"
-                      style="padding: 6px 14px; font-size: 12px"
-                      onclick="showToast('Connecting WhatsApp...')"
-                    >
-                      Connect
-                    </button>
-                  </div>
-
-                  <!-- Telegram -->
-                  <div class="settings-row">
-                    <div class="settings-row-left">
-                      <div class="settings-row-label">✈ Telegram</div>
-                      <div class="settings-row-desc">Not connected</div>
-                    </div>
-
-                    <button
-                      class="btn-save"
-                      style="padding: 6px 14px; font-size: 12px"
-                      onclick="showToast('Connecting Telegram...')"
-                    >
-                      Connect
-                    </button>
-                  </div>
-
-                  <!-- Outlook -->
-                  <div class="settings-row">
-                    <div class="settings-row-left">
-                      <div class="settings-row-label">📮 Outlook</div>
-                      {% if outlook_enabled %}
-                      <div class="settings-row-desc">Enabled</div>
-                      {% else %}
-                      <div class="settings-row-desc">Not enabled</div>
-                      {% endif %}
-                    </div>
-
-                    {% if outlook_enabled %}
-                    <button
-                      class="btn-cancel"
-                      style="padding: 6px 14px; font-size: 12px"
-                      onclick="toggleOutlook(false)"
-                    >
-                      Disable Outlook
-                    </button>
-                    {% else %}
-                    <button
-                      class="btn-save"
-                      style="padding: 6px 14px; font-size: 12px"
-                      onclick="toggleOutlook(true)"
-                    >
-                      Enable Outlook
-                    </button>
-                    {% endif %}
-                  </div>
-                </div>
-              </div>
-              <div id="spanel-security" class="settings-section">
-                Security settings
-              </div>
-              <div id="spanel-appearance" class="settings-section">
-                Appearance settings
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- PAGE: COMPOSE -->
-    <div id="page-compose" class="page-content">
-      <div class="compose-wrap">
-        <div class="compose-title-bar">
-          <button class="tool-btn" onclick="switchPage('dashboard')">
-            ← Back
-          </button>
-          <h2>New Message</h2>
-        </div>
-
-        <div class="compose-card">
-          <input
-            type="text"
-            class="ai-search-input"
-            placeholder="To"
-            style="margin-bottom: 15px"
-          />
-          <input
-            type="text"
-            class="ai-search-input"
-            placeholder="Subject"
-            style="margin-bottom: 15px"
-          />
-          <textarea
-            class="ai-search-input"
-            rows="8"
-            placeholder="Write your message..."
-            style="margin-bottom: 15px"
-          ></textarea>
-          <button class="sidebar-compose">Send ↑</button>
-        </div>
+        {% with dashboard_embed = true %} {% include 'message_view.html' %} {%
+        endwith %} {% with dashboard_embed = true %} {% include 'settings.html'
+        %} {% endwith %} {% with dashboard_embed = true %} {% include
+        'compose.html' %} {% endwith %}
       </div>
     </div>
 
@@ -753,6 +286,7 @@
 
       function confirmLogout() {
         const ok = confirm("Are you sure you want to sign out?");
+
         if (ok) {
           window.location.href = "/auth/logout";
         }
@@ -760,82 +294,78 @@
 
       function switchSettingsTab(el, panelId) {
         // 1. Update left nav active state
+
         document.querySelectorAll(".settings-nav-item").forEach((item) => {
           item.classList.remove("active");
         });
+
         el.classList.add("active");
 
         // 2. Hide all settings panels
+
         document.querySelectorAll(".settings-section").forEach((panel) => {
           panel.classList.remove("active");
         });
 
         // 3. Show the selected panel only
+
         document.getElementById(panelId).classList.add("active");
       }
 
       function activateSettingsTabByName(tabName) {
         const panelId = "spanel-" + (tabName || "profile");
+
         const targetPanel = document.getElementById(panelId);
+
         if (!targetPanel) return;
 
         const targetNav = document.querySelector(
           `.settings-nav-item[onclick*="${panelId}"]`,
         );
+
         if (targetNav) {
           switchSettingsTab(targetNav, panelId);
         }
       }
 
-      function openPhotoPicker() {
-        document.getElementById("photoInput").click();
-      }
+      (function () {
+        let storedTheme = "light";
 
-      function loadPhoto(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          document.getElementById("profilePhoto").src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      }
-
-      async function toggleOutlook(enabled) {
         try {
-          const response = await fetch("/api/channels/outlook", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "same-origin",
-            body: JSON.stringify({ enabled }),
-          });
-          const result = await response.json();
-          if (response.ok) {
-            location.reload();
-          } else {
-            showToast("Error: " + (result.error || "Failed to toggle Outlook"));
-          }
+          storedTheme = localStorage.getItem("voiceMailTheme") || "light";
         } catch (error) {
-          showToast("Network error");
+          storedTheme = "light";
         }
-      }
+
+        const systemDark = window.matchMedia(
+          "(prefers-color-scheme: dark)",
+        ).matches;
+
+        document.documentElement.dataset.theme =
+          storedTheme === "system"
+            ? systemDark
+              ? "dark"
+              : "light"
+            : storedTheme;
+
+        document.documentElement.dataset.themeChoice = storedTheme;
+      })();
     </script>
+
+    <script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+
     <script src="{{ url_for('static', filename='js/message_summary.js') }}"></script>
+
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+
+    <script src="{{ url_for('static', filename='js/compose.js') }}"></script>
+
     <script src="{{ url_for('static', filename='js/ai.js') }}"></script>
+
     <script src="{{ url_for('static', filename='js/ai_panel.js') }}"></script>
-    <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        if (typeof applyInitialDashboardState === "function")
-          applyInitialDashboardState();
-        if (typeof bindDashboardInteractions === "function")
-          bindDashboardInteractions();
-        if (typeof setActiveSidebarItem === "function") {
-          setActiveSidebarItem(window.currentDashboardView || "sb-inbox");
-        }
-        if (typeof loadInboxMessages === "function") loadInboxMessages();
-      });
-    </script>
+
+    <script src="{{ url_for('static', filename='js/message.js') }}"></script>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
   </body>
 </html>

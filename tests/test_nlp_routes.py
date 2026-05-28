@@ -93,7 +93,7 @@ def test_summarize_route_accepts_whitespace_around_email_fields(client, monkeypa
 
 
 def test_ai_query_route_requires_object_payload(client):
-    response = client.post("/nlp/ai-query", json=["not", "an", "object"])
+    response = client.post("/api/ai-panel/query", json=["not", "an", "object"])
 
     assert response.status_code == 400
     assert response.json["success"] is False
@@ -101,7 +101,7 @@ def test_ai_query_route_requires_object_payload(client):
 
 
 def test_ai_query_route_requires_query(client):
-    response = client.post("/nlp/ai-query", json={"query": "   ", "emails": []})
+    response = client.post("/api/ai-panel/query", json={"query": "   ", "emails": []})
 
     assert response.status_code == 400
     assert response.json["success"] is False
@@ -110,7 +110,7 @@ def test_ai_query_route_requires_query(client):
 
 def test_ai_query_route_rejects_non_list_emails(client):
     response = client.post(
-        "/nlp/ai-query",
+        "/api/ai-panel/query",
         json={"query": "Summarize my inbox", "emails": {"subject": "Hi"}},
     )
 
@@ -126,10 +126,10 @@ def test_ai_query_route_passes_email_context_to_ai(client, monkeypatch):
         captured["prompt"] = prompt
         return "Alice asked for feedback by Friday."
 
-    monkeypatch.setattr("src.web.nlp_routes.generate_response", fake_generate_response)
+    monkeypatch.setattr("src.web.ai_panel_routes.generate_response", fake_generate_response)
 
     response = client.post(
-        "/nlp/ai-query",
+        "/api/ai-panel/query",
         json={
             "query": "What needs action?",
             "emails": [
@@ -151,6 +151,7 @@ def test_ai_query_route_passes_email_context_to_ai(client, monkeypatch):
     assert response.json["query"] == "What needs action?"
     assert response.json["response"] == "Alice asked for feedback by Friday."
     assert response.json["ai_mode"]
+    assert response.json["source"] == "inbox_context"
     assert "What needs action?" in captured["prompt"]
     assert "Alice" in captured["prompt"]
     assert "Q3 report" in captured["prompt"]
@@ -160,7 +161,7 @@ def test_ai_query_route_passes_email_context_to_ai(client, monkeypatch):
 
 def test_ai_query_route_returns_structured_mixed_context_filter(client):
     response = client.post(
-        "/nlp/ai-query",
+        "/api/ai-panel/query",
         json={
             "query": "show outlook",
             "emails": [
@@ -210,15 +211,17 @@ def test_ai_query_route_filters_unread_attachments_sender_and_subject(client):
         },
     ]
 
-    unread = client.post("/nlp/ai-query", json={"query": "unread", "emails": emails})
+    unread = client.post(
+        "/api/ai-panel/query", json={"query": "unread", "emails": emails}
+    )
     attachments = client.post(
-        "/nlp/ai-query", json={"query": "with attachments", "emails": emails}
+        "/api/ai-panel/query", json={"query": "with attachments", "emails": emails}
     )
     sender = client.post(
-        "/nlp/ai-query", json={"query": "from Alice", "emails": emails}
+        "/api/ai-panel/query", json={"query": "from Alice", "emails": emails}
     )
     subject = client.post(
-        "/nlp/ai-query", json={"query": "subject Budget", "emails": emails}
+        "/api/ai-panel/query", json={"query": "subject Budget", "emails": emails}
     )
 
     assert unread.json["cards"][0]["id"] == "1"
@@ -229,35 +232,156 @@ def test_ai_query_route_filters_unread_attachments_sender_and_subject(client):
 
 def test_ai_query_route_navigation_intents_return_safe_actions(client):
     settings = client.post(
-        "/nlp/ai-query", json={"query": "open settings", "emails": []}
+        "/api/ai-panel/query", json={"query": "open settings", "emails": []}
     )
     compose = client.post(
-        "/nlp/ai-query", json={"query": "compose email", "emails": []}
+        "/api/ai-panel/query", json={"query": "compose email", "emails": []}
     )
 
     assert settings.status_code == 200
     assert settings.json["actions"][0]["type"] == "open_settings"
+    assert settings.json["source"] == "navigation"
     assert compose.status_code == 200
     assert compose.json["actions"][0]["type"] == "open_compose"
+    assert compose.json["source"] == "navigation"
+
+
+def test_ai_query_route_greeting_returns_app_assistant_intro(client):
+    response = client.post(
+        "/api/ai-panel/query",
+        json={"query": "hello ai", "emails": []},
+    )
+
+    assert response.status_code == 200
+    assert response.json["success"] is True
+    assert response.json["intent"] == "greeting"
+    assert response.json["source"] == "conversation"
+    assert "app assistant" in response.json["response"]
+    assert response.json["actions"][0]["type"] == "open_compose"
+
+
+def test_ai_query_route_app_help_works_without_loaded_emails(client):
+    response = client.post(
+        "/api/ai-panel/query",
+        json={"query": "How do I connect Gmail?", "emails": []},
+    )
+
+    assert response.status_code == 200
+    assert response.json["success"] is True
+    assert response.json["intent"] == "how_to"
+    assert response.json["source"] == "app_knowledge"
+    assert "Settings" in response.json["response"]
+    assert "Gmail" in response.json["response"]
+    assert response.json["actions"][0]["type"] == "open_settings"
+    assert response.json["actions"][0]["payload"]["tab"] == "channels"
 
 
 def test_ai_query_route_empty_context_does_not_invent(client):
     response = client.post(
-        "/nlp/ai-query",
+        "/api/ai-panel/query",
         json={"query": "what needs action", "emails": []},
     )
 
     assert response.status_code == 200
     assert response.json["intent"] == "insufficient_context"
+    assert response.json["source"] == "inbox_context"
     assert response.json["cards"] == []
     assert "emails loaded" in response.json["response"]
 
 
 def test_ai_query_route_rejects_invalid_history(client):
     response = client.post(
-        "/nlp/ai-query",
+        "/api/ai-panel/query",
         json={"query": "summarize", "emails": [], "history": {"role": "user"}},
     )
 
     assert response.status_code == 400
     assert response.json["error"] == "History must be a list."
+
+
+def test_legacy_ai_query_route_still_forwards_to_ai_panel(client):
+    response = client.post("/nlp/ai-query", json={"query": "compose email", "emails": []})
+
+    assert response.status_code == 200
+    assert response.json["actions"][0]["type"] == "open_compose"
+
+
+def test_ai_draft_route_uses_qwen_draft_service(client, monkeypatch):
+    captured = {}
+
+    def fake_generate_qwen_drafts(text, tones=None):
+        captured["text"] = text
+        captured["tones"] = tones
+        return {"formal": "Dear Alex,\n\nThank you for the update.\n\nSincerely"}
+
+    monkeypatch.setattr(
+        "src.web.compose_routes.qwen_draft_service.generate_qwen_drafts",
+        fake_generate_qwen_drafts,
+    )
+
+    response = client.post(
+        "/api/compose/draft",
+        json={"prompt": "Reply to Alex about the project update.", "tone": "formal"},
+    )
+
+    assert response.status_code == 200
+    assert response.json["success"] is True
+    assert response.json["tone"] == "formal"
+    assert response.json["draft"].startswith("Dear Alex")
+    assert response.json["drafts"] == {
+        "formal": "Dear Alex,\n\nThank you for the update.\n\nSincerely"
+    }
+    assert captured == {
+        "text": "Reply to Alex about the project update.",
+        "tones": ["formal"],
+    }
+
+
+def test_ai_draft_route_validates_payload(client):
+    response = client.post("/api/compose/draft", json={"prompt": "   "})
+
+    assert response.status_code == 400
+    assert response.json["success"] is False
+    assert response.json["error"] == "Email text is required."
+
+
+def test_ai_draft_route_accepts_subject_payload(client, monkeypatch):
+    captured = {}
+
+    def fake_generate_qwen_drafts(text, tones=None):
+        captured["text"] = text
+        captured["tones"] = tones
+        return {"professional": "Hello,\n\nHere is the budget update.\n\nBest regards"}
+
+    monkeypatch.setattr(
+        "src.web.compose_routes.qwen_draft_service.generate_qwen_drafts",
+        fake_generate_qwen_drafts,
+    )
+
+    response = client.post(
+        "/api/compose/draft",
+        json={"subject": "Budget update"},
+    )
+
+    assert response.status_code == 200
+    assert response.json["success"] is True
+    assert captured == {"text": "Budget update", "tones": ["professional"]}
+
+
+def test_legacy_ai_draft_route_still_forwards_to_compose_draft(client, monkeypatch):
+    def fake_generate_qwen_drafts(text, tones=None):
+        return {"professional": "Hello,\n\nHere is the requested draft.\n\nBest"}
+
+    monkeypatch.setattr(
+        "src.web.compose_routes.qwen_draft_service.generate_qwen_drafts",
+        fake_generate_qwen_drafts,
+    )
+
+    response = client.post(
+        "/nlp/ai-draft",
+        json={"prompt": "Draft a quick project update."},
+    )
+
+    assert response.status_code == 200
+    assert response.json["success"] is True
+    assert response.json["draft"].startswith("Hello")

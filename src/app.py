@@ -9,6 +9,10 @@ from src.db import init_db
 
 from src.web.auth_routes import auth_bp, channel_bp
 
+from src.web.ai_panel_routes import ai_panel_bp
+
+from src.web.compose_routes import compose_bp
+
 from src.web.email_routes import email_bp, messages_bp
 
 from src.web.nlp_routes import nlp_bp
@@ -71,6 +75,10 @@ def create_app(test_config=None):
     app.register_blueprint(email_bp)
 
     app.register_blueprint(messages_bp)
+
+    app.register_blueprint(ai_panel_bp)
+
+    app.register_blueprint(compose_bp)
 
     app.register_blueprint(nlp_bp)
 

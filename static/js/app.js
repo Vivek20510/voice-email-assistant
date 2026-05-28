@@ -11,13 +11,20 @@
 document.addEventListener("DOMContentLoaded", () => {
   // ── Dashboard boot ──────────────────────────────────────────────────────────
 
-  applyInitialDashboardState();
+  if (typeof applyInitialDashboardState === "function")
+    applyInitialDashboardState();
 
-  bindDashboardInteractions();
+  if (typeof bindDashboardInteractions === "function")
+    bindDashboardInteractions();
 
-  setActiveSidebarItem(currentDashboardView);
+  if (
+    typeof setActiveSidebarItem === "function" &&
+    typeof currentDashboardView !== "undefined"
+  ) {
+    setActiveSidebarItem(currentDashboardView);
+  }
 
-  loadInboxMessages();
+  if (typeof loadInboxMessages === "function") loadInboxMessages();
 
   // ── Compose attachment (single file toast) ──────────────────────────────────
 
@@ -59,21 +66,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ── Multi-file attachment preview ───────────────────────────────────────────
 
-  initAttachmentPreview();
+  if (typeof initAttachmentPreview === "function") initAttachmentPreview();
 
   // ── Language preference restore ─────────────────────────────────────────────
 
-  restoreSavedLanguage();
+  if (typeof restoreSavedLanguage === "function") restoreSavedLanguage();
+
+  if (typeof restoreSavedTheme === "function") restoreSavedTheme();
 
   // ── Profile card toggle ─────────────────────────────────────────────────────
 
-  initProfileCardToggle();
+  if (typeof initProfileCardToggle === "function") initProfileCardToggle();
 });
+
+function handleNavSearch(query) {
+  const value = String(query || "").trim().toLowerCase();
+  const rows = document.querySelectorAll(".inbox-item");
+
+  rows.forEach((row) => {
+    const text = row.textContent.toLowerCase();
+    row.hidden = Boolean(value) && !text.includes(value);
+  });
+}
 
 // ── Global dropdown close on outside click ──────────────────────────────────
 
 document.addEventListener("click", (e) => {
   if (!e.target.closest(".tool-dropdown")) {
-    closeMenus();
+    if (typeof closeMenus === "function") closeMenus();
   }
 });

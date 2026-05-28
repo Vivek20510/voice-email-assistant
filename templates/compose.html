@@ -2,13 +2,26 @@
 
 <!-- PAGE: COMPOSE -->
 
-<div id="page-compose" class="page-content">
-  <div class="compose-wrap">
-    <div class="compose-title-bar">
-      <button class="tool-btn" onclick="switchPage('dashboard')">← Back</button>
+<!-- PAGE: COMPOSE -->
+
+<div id="page-compose" class="page-content{% if active %} active{% endif %}">
+  <form class="compose-page" id="compose-form">
+    <header class="compose-header">
+      <button
+        type="button"
+        class="compose-back-btn"
+        onclick="
+          typeof switchPage === 'function'
+            ? switchPage('dashboard')
+            : window.history.back()
+        "
+        aria-label="Back to dashboard"
+      >
+        &#8592;
+      </button>
 
       <h1>Compose</h1>
-    </div>
+    </header>
 
     <section class="compose-channel" aria-label="Send via">
       <label class="compose-field-label" for="compose-channel">Send via</label>
@@ -76,6 +89,8 @@
           oninput="updateComposeCount()"
         ></textarea>
 
+        <div id="attachment-preview" class="attachment-preview"></div>
+
         <span class="error-text" id="message-error"></span>
       </div>
 
@@ -117,7 +132,7 @@
             <span>Attach</span>
           </button>
 
-          <input id="compose-attachment" type="file" hidden />
+          <input id="compose-attachment" type="file" multiple hidden />
         </div>
       </div>
     </section>
@@ -181,79 +196,77 @@
         </button>
       </div>
     </footer>
-  </div>
-
-  {% endmacro %} {% if dashboard_embed|default(false) %} {{ dashboard_compose()
-  }} {% else %} {% extends 'base.html' %} {% block extra_css %}
-  <link rel="stylesheet" href="/static/css/compose.css?v=theme-20260521" />
-  {% endblock %} {% block content %}
-
-  <section class="compose-panel">
-    <h1>Compose Message</h1>
-
-    <form class="compose-form">
-      <div class="form-row">
-        <label for="service">Service</label>
-
-        <select id="service" name="service">
-          <option value="gmail">Gmail</option>
-
-          <option value="telegram">Telegram</option>
-        </select>
-      </div>
-
-      <div class="form-row">
-        <label for="recipient">Recipient</label>
-
-        <input
-          id="recipient"
-          name="recipient"
-          type="text"
-          placeholder="Email or Telegram handle"
-        />
-      </div>
-
-      <div class="form-row">
-        <label for="subject">Subject</label>
-
-        <input
-          id="subject"
-          name="subject"
-          type="text"
-          placeholder="Subject (Gmail only)"
-        />
-      </div>
-
-      <div class="form-row">
-        <label for="message">Message</label>
-
-        <textarea
-          id="message"
-          name="message"
-          rows="6"
-          placeholder="Write your message here..."
-        ></textarea>
-      </div>
-
-      <button type="button">Send</button>
-    </form>
-
-    <div class="voice-panel">
-      <h2>Voice Dictation</h2>
-
-      <div class="voice-controls">
-        <button type="button">Record</button>
-
-        <button type="button">Stop</button>
-      </div>
-
-      <div class="voice-preview">
-        <h3>Transcription Preview</h3>
-
-        <p>No transcription available yet.</p>
-      </div>
-    </div>
-  </section>
-
-  {% endblock %} {% endif %}
+  </form>
 </div>
+
+{% endmacro %} {% if dashboard_embed|default(false) %} {{ dashboard_compose() }}
+{% else %} {% extends 'base.html' %} {% block content %}
+
+<section class="compose-panel">
+  <h1>Compose Message</h1>
+
+  <form class="compose-form">
+    <div class="form-row">
+      <label for="service">Service</label>
+
+      <select id="service" name="service">
+        <option value="gmail">Gmail</option>
+
+        <option value="telegram">Telegram</option>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <label for="recipient">Recipient</label>
+
+      <input
+        id="recipient"
+        name="recipient"
+        type="text"
+        placeholder="Email or Telegram handle"
+      />
+    </div>
+
+    <div class="form-row">
+      <label for="subject">Subject</label>
+
+      <input
+        id="subject"
+        name="subject"
+        type="text"
+        placeholder="Subject (Gmail only)"
+      />
+    </div>
+
+    <div class="form-row">
+      <label for="message">Message</label>
+
+      <textarea
+        id="message"
+        name="message"
+        rows="6"
+        placeholder="Write your message here..."
+      ></textarea>
+    </div>
+
+    <button type="button">Send</button>
+  </form>
+
+  <div class="voice-panel">
+    <h2>Voice Dictation</h2>
+
+    <div class="voice-controls">
+      <button type="button">Record</button>
+
+      <button type="button">Stop</button>
+    </div>
+
+    <div class="voice-preview">
+      <h3>Transcription Preview</h3>
+
+      <p>No transcription available yet.</p>
+    </div>
+  </div>
+</section>
+
+{% endblock %} {% endif %}

@@ -18,11 +18,6 @@ let currentDashboardView = "sb-inbox";
 
 let miniMessageListScrollTop = 0;
 
-if (typeof window !== "undefined") {
-  window.currentEmails = window.currentEmails || [];
-  window.loadedEmails = window.loadedEmails || [];
-}
-
 // ── View Metadata ─────────────────────────────────────────────────────────────
 
 const dashboardViewTitles = {
@@ -490,13 +485,8 @@ function renderInboxError(message) {
 
 // ── Inbox List Render ─────────────────────────────────────────────────────────
 
-function renderInboxMessages(messages, options = {}) {
+function renderInboxMessages(messages) {
   setDashboardMessageMode(false);
-  const shouldUpdateCurrent = options.updateCurrent !== false;
-  if (typeof window !== "undefined" && shouldUpdateCurrent) {
-    window.currentEmails = messages;
-    window.loadedEmails = messages;
-  }
 
   let activeGroup = "";
 
@@ -619,10 +609,6 @@ async function loadInboxMessages() {
         : [];
 
     inboxMessagesCache = messages;
-    if (typeof window !== "undefined") {
-      window.currentEmails = messages;
-      window.loadedEmails = messages;
-    }
 
     const cacheKey = `${channel}_${currentDashboardView}`;
 
@@ -645,7 +631,6 @@ async function loadInboxMessages() {
 
 function restoreInboxList() {
   currentMessageId = null;
-  if (typeof window !== "undefined") window.activeMessageId = "";
 
   if (!mailViews.has(currentDashboardView)) {
     renderEmptyView(currentDashboardView);
@@ -660,10 +645,6 @@ function restoreInboxList() {
 
   if (cachedMessages.length) {
     inboxMessagesCache = cachedMessages;
-    if (typeof window !== "undefined") {
-      window.currentEmails = cachedMessages;
-      window.loadedEmails = cachedMessages;
-    }
 
     renderInboxMessages(cachedMessages);
 
@@ -679,7 +660,6 @@ function switchSidebar(itemId) {
   if (typeof switchPage === "function") switchPage("dashboard");
 
   currentDashboardView = itemId;
-  if (typeof window !== "undefined") window.currentDashboardView = itemId;
 
   setActiveSidebarItem(itemId);
 
@@ -692,10 +672,6 @@ function switchSidebar(itemId) {
 
     if (cachedMessages.length) {
       inboxMessagesCache = cachedMessages;
-      if (typeof window !== "undefined") {
-        window.currentEmails = cachedMessages;
-        window.loadedEmails = cachedMessages;
-      }
 
       renderInboxMessages(cachedMessages);
 
@@ -738,158 +714,6 @@ function closeMenus() {
     .forEach((m) => (m.style.display = "none"));
 }
 
-// ── AI Command Bridge ────────────────────────────────────────────────────────
-
-function getDashboardMessagesForAi() {
-  if (typeof window === "undefined") return inboxMessagesCache || [];
-  return window.loadedEmails?.length
-    ? window.loadedEmails
-    : window.currentEmails || inboxMessagesCache || [];
-}
-
-function renderAiFilteredMessages(messages, label) {
-  if (!messages.length) {
-    setDashboardMessageMode(false);
-    setInboxContent(`
-
-      <div class="inbox-feedback" data-state="empty">
-
-        <h3>No matching messages</h3>
-
-        <p>${escapeHtml(label || "The AI command did not match loaded mail.")}</p>
-
-      </div>
-
-    `);
-    return;
-  }
-
-  renderInboxMessages(messages, { updateCurrent: false });
-}
-
-function aiNavigate(payload = {}) {
-  const target = payload.target || payload.page || "dashboard";
-
-  if (target === "settings") {
-    if (typeof switchPage === "function") switchPage("settings");
-    if (payload.tab && typeof activateSettingsTabByName === "function") {
-      activateSettingsTabByName(payload.tab);
-    }
-    return true;
-  }
-
-  if (target === "compose") {
-    if (typeof switchPage === "function") switchPage("compose");
-    return true;
-  }
-
-  if (target === "gmail") {
-    switchSidebar("sb-emails");
-    return true;
-  }
-
-  if (target === "outlook") {
-    switchSidebar("sb-outlook");
-    return true;
-  }
-
-  if (typeof switchPage === "function") switchPage(target);
-  return true;
-}
-
-function aiOpenMessage(payload = {}) {
-  const messageId = payload.message_id || payload.id;
-  if (!messageId) return false;
-  if (typeof switchPage === "function") switchPage("dashboard");
-  if (typeof window !== "undefined") window.activeMessageId = messageId;
-  loadMessageDetail(messageId);
-  return true;
-}
-
-function aiApplyFilter(payload = {}) {
-  if (typeof switchPage === "function") switchPage("dashboard");
-
-  const messages = getDashboardMessagesForAi();
-  const ids = new Set((payload.message_ids || []).map((id) => String(id)));
-  let filtered = ids.size
-    ? messages.filter((message) => ids.has(String(message.id)))
-    : messages.slice();
-
-  if (payload.channel) {
-    filtered = filtered.filter(
-      (message) =>
-        String(message.channel || "").toLowerCase() ===
-        String(payload.channel).toLowerCase(),
-    );
-  }
-  if (payload.unread) filtered = filtered.filter((message) => message.unread);
-  if (payload.has_attachments) {
-    filtered = filtered.filter(
-      (message) =>
-        message.has_attachments ||
-        message.hasAttachments ||
-        (Array.isArray(message.attachments) && message.attachments.length > 0),
-    );
-  }
-  if (payload.sender) {
-    filtered = filtered.filter((message) =>
-      String(message.sender || message.sender_email || "")
-        .toLowerCase()
-        .includes(String(payload.sender).toLowerCase()),
-    );
-  }
-  if (payload.subject) {
-    filtered = filtered.filter((message) =>
-      String(message.subject || "")
-        .toLowerCase()
-        .includes(String(payload.subject).toLowerCase()),
-    );
-  }
-  if (payload.today) {
-    const today = new Date().toDateString();
-    filtered = filtered.filter((message) => {
-      const date = new Date(message.received_at || message.date || "");
-      return !Number.isNaN(date.getTime()) && date.toDateString() === today;
-    });
-  }
-
-  renderAiFilteredMessages(filtered, "No loaded messages matched that filter.");
-  return true;
-}
-
-function aiPrefillCompose(payload = {}) {
-  aiNavigate({ target: "compose" });
-
-  const inputs = document.querySelectorAll("#page-compose input");
-  const textarea = document.querySelector("#page-compose textarea");
-  const toInput = inputs[0];
-  const subjectInput = inputs[1];
-
-  if (toInput && payload.to) toInput.value = payload.to;
-  if (subjectInput && payload.subject) subjectInput.value = payload.subject;
-  if (textarea && payload.body) textarea.value = payload.body;
-  return true;
-}
-
-function aiMarkReadLocal(payload = {}) {
-  const messageId = payload.message_id || payload.id;
-  if (!messageId) return false;
-  markMessageRead(messageId);
-  return true;
-}
-
-if (typeof window !== "undefined") {
-  window.AICommandCenter = {
-    applyFilter: aiApplyFilter,
-    getActiveMessageId: () => currentMessageId || "",
-    getActiveView: () => currentDashboardView || "sb-inbox",
-    navigate: aiNavigate,
-    openMessage: aiOpenMessage,
-    prefillCompose: aiPrefillCompose,
-    markReadLocal: aiMarkReadLocal,
-  };
-}
-
 // ── Initial State ─────────────────────────────────────────────────────────────
 
 function applyInitialDashboardState() {
@@ -929,10 +753,8 @@ function bindDashboardInteractions() {
 
       const messageId = miniMessage.dataset.messageId;
 
-      if (messageId && messageId !== currentMessageId) {
-        if (typeof window !== "undefined") window.activeMessageId = messageId;
+      if (messageId && messageId !== currentMessageId)
         loadMessageDetail(messageId);
-      }
 
       return;
     }
@@ -944,10 +766,7 @@ function bindDashboardInteractions() {
     if (messageRow) {
       const messageId = messageRow.dataset.messageId;
 
-      if (messageId) {
-        if (typeof window !== "undefined") window.activeMessageId = messageId;
-        loadMessageDetail(messageId);
-      }
+      if (messageId) loadMessageDetail(messageId);
 
       return;
     }
@@ -960,4 +779,63 @@ function bindDashboardInteractions() {
 
     if (placeholderButton) event.preventDefault();
   });
+}
+
+if (typeof window !== "undefined") {
+  window.AICommandCenter = {
+    getActiveView: () => currentDashboardView,
+    getActiveMessageId: () => currentMessageId || "",
+    navigate: ({ target, tab } = {}) => {
+      if (!target || typeof switchPage !== "function") return false;
+      switchPage(target);
+      if (
+        target === "settings" &&
+        tab &&
+        typeof activateSettingsTabByName === "function"
+      ) {
+        activateSettingsTabByName(tab);
+      }
+      return true;
+    },
+    prefillCompose: (payload = {}) => {
+      if (typeof switchPage === "function") switchPage("compose");
+      const fieldMap = {
+        channel: "compose-channel",
+        to: "compose-to",
+        recipient: "compose-to",
+        subject: "compose-subject",
+        body: "compose-message",
+        message: "compose-message",
+      };
+
+      Object.entries(fieldMap).forEach(([key, id]) => {
+        if (payload[key] === undefined) return;
+        const field = document.getElementById(id);
+        if (field) field.value = payload[key];
+      });
+
+      if (typeof updateComposeCount === "function") updateComposeCount();
+      return true;
+    },
+    openMessage: ({ message_id: messageId, id } = {}) => {
+      const targetId = messageId || id;
+      if (!targetId) return false;
+      loadMessageDetail(targetId);
+      return true;
+    },
+    applyFilter: ({ view, filter } = {}) => {
+      if (view && mailViews.has(view)) {
+        switchSidebar(view);
+        return true;
+      }
+      if (filter) applyFilter(filter);
+      return true;
+    },
+    markReadLocal: ({ message_id: messageId, id } = {}) => {
+      const targetId = messageId || id;
+      if (!targetId) return false;
+      markMessageRead(targetId);
+      return true;
+    },
+  };
 }

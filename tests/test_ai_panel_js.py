@@ -40,6 +40,7 @@ def test_ai_panel_sends_context_and_renders_success_and_errors():
         };
 
         const fetchCalls = [];
+        const navigateCalls = [];
         let fetchHandler = async () => ({
           ok: true,
           json: async () => ({ response: "Inbox summary ready." }),
@@ -66,7 +67,10 @@ def test_ai_panel_sends_context_and_renders_success_and_errors():
             getActiveMessageId: () => "",
             applyFilter: () => true,
             openMessage: () => true,
-            navigate: () => true,
+            navigate: (payload) => {
+              navigateCalls.push(payload);
+              return true;
+            },
             prefillCompose: () => true,
             markReadLocal: () => true,
           },
@@ -96,7 +100,7 @@ def test_ai_panel_sends_context_and_renders_success_and_errors():
           await context.window.AIPanel.sendQuery();
 
           assert.equal(fetchCalls.length, 1);
-          assert.equal(fetchCalls[0].url, "/nlp/ai-query");
+          assert.equal(fetchCalls[0].url, "/api/ai-panel/query");
           const payload = JSON.parse(fetchCalls[0].options.body);
           assert.equal(payload.query, "Summarize unread");
           assert.equal(payload.emails.length, 1);
@@ -107,6 +111,32 @@ def test_ai_panel_sends_context_and_renders_success_and_errors():
           assert.equal(elements["ai-results"].children.at(-1).className, "ai-turn ai-turn-assistant");
           assert.ok(elements["ai-results"].children.at(-1).textContent.includes("Inbox summary ready."));
 
+          window.currentEmails = [];
+          fetchHandler = async () => ({
+            ok: true,
+            json: async () => ({
+              response: "Open Settings > Channels to connect Gmail.",
+              actions: [
+                {
+                  type: "open_settings",
+                  label: "Open channels",
+                  payload: { tab: "channels" },
+                },
+              ],
+            }),
+          });
+          elements["ai-input"].value = "How do I connect Gmail?";
+          await context.window.AIPanel.sendQuery();
+          assert.equal(fetchCalls.length, 2);
+          const helpPayload = JSON.parse(fetchCalls[1].options.body);
+          assert.equal(helpPayload.query, "How do I connect Gmail?");
+          assert.equal(helpPayload.emails.length, 0);
+          assert.ok(elements["ai-results"].children.at(-1).textContent.includes("Open channels"));
+          assert.equal(navigateCalls.length, 1);
+          assert.equal(navigateCalls[0].target, "settings");
+          assert.equal(navigateCalls[0].tab, "channels");
+
+          window.currentEmails = [{ id: "msg-2", sender: "Bob", subject: "Plan" }];
           fetchHandler = async () => ({
             ok: false,
             status: 500,
@@ -124,7 +154,7 @@ def test_ai_panel_sends_context_and_renders_success_and_errors():
           await context.window.AIPanel.sendQuery();
           assert.equal(elements["ai-results"].children.at(-1).className, "ai-turn ai-turn-assistant");
           assert.ok(elements["ai-results"].children.at(-1).textContent.includes("Network down."));
-          assert.equal(context.window.AIPanel.history.length, 2);
+          assert.equal(context.window.AIPanel.history.length, 4);
         })().catch((error) => {
           console.error(error);
           process.exit(1);

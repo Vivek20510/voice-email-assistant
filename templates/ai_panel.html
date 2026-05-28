@@ -6,9 +6,9 @@
 
     <div class="ai-panel-header">
       <div>
-        <div class="ai-panel-title">✦ AI Assistant</div>
+        <div class="ai-panel-title">AI Assistant</div>
 
-        <div class="ai-panel-sub">Quick insights from your inbox</div>
+        <div class="ai-panel-sub">App help, navigation, and inbox insights</div>
       </div>
     </div>
 
@@ -19,7 +19,7 @@
         type="text"
         class="ai-search-input"
         id="ai-input"
-        placeholder="Ask AI to summarise, find, or filter…"
+        placeholder="Ask about the app, compose, or inbox..."
         onkeydown="handleAiKey(event)"
       />
 
@@ -33,47 +33,47 @@
     <div class="ai-chips">
       <div
         class="ai-chip"
-        onclick="prefillAi('Summarize my unread emails in 5 bullet points')"
+        onclick="prefillAi('How do I connect Gmail?')"
       >
-        Summarise Emails
+        How do I connect Gmail?
       </div>
 
       <div
         class="ai-chip"
-        onclick="prefillAi('What are the important emails today?')"
+        onclick="prefillAi('Open compose')"
       >
-        Important Today
+        Open compose
       </div>
 
       <div
         class="ai-chip"
-        onclick="prefillAi('Extract action items from my emails')"
+        onclick="prefillAi('Show unread')"
       >
-        Action Items
+        Show unread
       </div>
 
       <div
         class="ai-chip"
-        onclick="prefillAi('Show emails with attachments and explain them')"
+        onclick="prefillAi('Summarize today')"
       >
-        Attachments
+        Summarize today
       </div>
     </div>
 
     <!-- ✅ Results Area -->
 
     <div class="ai-results-area" id="ai-results">
-      <div class="ai-placeholder">✦ Ask something about your inbox...</div>
+      <div class="ai-placeholder">Ask about the app or your inbox.</div>
 
       <div class="ai-empty" id="ai-empty">
-        <div class="ai-empty-icon">✦</div>
+        <div class="ai-empty-icon">AI</div>
 
         <div class="ai-empty-text">
-          Get instant summaries,<br />
+          Get app guidance,<br />
 
-          action items, and insights<br />
+          navigation help, summaries,<br />
 
-          from your inbox.
+          filters, and draft support.
         </div>
       </div>
     </div>

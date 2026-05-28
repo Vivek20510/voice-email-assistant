@@ -23,10 +23,12 @@ const AIPanel = (() => {
     const item = document.createElement("div");
     item.className = `ai-turn ai-turn-${role}`;
     item.innerHTML = html;
-    item.textContent = html
-      .replace(/<[^>]*>/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
+    if (typeof HTMLElement === "undefined" || !(item instanceof HTMLElement)) {
+      item.textContent = html
+        .replace(/<[^>]*>/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
     resultsEl().appendChild(item);
     resultsEl().scrollTop = resultsEl().scrollHeight;
     return item;
@@ -60,6 +62,28 @@ const AIPanel = (() => {
     }
   }
 
+  function canSkipEmailWait(query) {
+    const q = String(query || "").toLowerCase().trim();
+    if (/^(hello|hi|hey)(\s+(ai|assistant))?[.!?]*$/.test(q)) return true;
+    return [
+      "how do",
+      "how can",
+      "how to",
+      "what can",
+      "what do",
+      "help",
+      "explain",
+      "guide",
+      "connect",
+      "open compose",
+      "compose email",
+      "new email",
+      "open settings",
+      "go to settings",
+      "settings",
+    ].some((term) => q.includes(term));
+  }
+
   function activeDashboardContext() {
     const commandCenter = window.AICommandCenter || {};
     return {
@@ -73,10 +97,12 @@ const AIPanel = (() => {
   }
 
   async function fetchAI(query) {
-    await waitForEmails();
+    if (!canSkipEmailWait(query)) {
+      await waitForEmails();
+    }
     const dashboardContext = activeDashboardContext();
 
-    const response = await fetch("/nlp/ai-query", {
+    const response = await fetch("/api/ai-panel/query", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

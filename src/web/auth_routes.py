@@ -95,6 +95,14 @@ def _settings_context(**extra):
         "gmail_success": session.pop("gmail_success", None),
         "outlook_error": session.pop("outlook_error", None),
         "outlook_success": session.pop("outlook_success", None),
+        "prefs": {
+            "email_notifications": True,
+            "whatsapp_notifications": False,
+            "telegram_notifications": False,
+            "desktop_notifications": True,
+            "notification_sound": True,
+            "dnd_schedule": "off",
+        },
     }
 
     context.update(extra)

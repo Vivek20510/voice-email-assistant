@@ -80,6 +80,17 @@ function checkPasswordMatch() {
     confirmPwd.length > 0 && newPwd !== confirmPwd ? "block" : "none";
 }
 
+function validatePassword() {
+  const newPwd = document.getElementById("newPassword")?.value || "";
+  const passwordHint = document.getElementById("passwordHint");
+  if (!passwordHint) return;
+
+  const pwdRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+  passwordHint.style.display =
+    newPwd.length > 0 && !pwdRegex.test(newPwd) ? "block" : "none";
+  checkPasswordMatch();
+}
+
 function hideOldPwdError() {
   const el = document.getElementById("oldPwdHint");
   if (el) el.style.display = "none";
@@ -197,6 +208,59 @@ function activateSettingsTabByName(tabName) {
       switchSettingsTab(item, panelId);
     }
   });
+}
+
+// ── Appearance ────────────────────────────────────────────────────────────────
+function resolveThemeChoice(choice) {
+  if (choice !== "system") return choice;
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
+function setThemePreference(choice) {
+  const theme = choice || "light";
+  localStorage.setItem("voiceMailTheme", theme);
+  document.documentElement.dataset.theme = resolveThemeChoice(theme);
+  document.documentElement.dataset.themeChoice = theme;
+}
+
+function saveAppearanceSettings() {
+  const theme = document.getElementById("appearance-theme")?.value || "light";
+  setThemePreference(theme);
+  showToast("Appearance saved");
+}
+
+function restoreSavedTheme() {
+  const theme = localStorage.getItem("voiceMailTheme") || "light";
+  const select = document.getElementById("appearance-theme");
+  if (select) select.value = theme;
+  setThemePreference(theme);
+}
+
+// ── Voice Phrase Modal ────────────────────────────────────────────────────────
+function openVoiceModal() {
+  const modal = document.getElementById("voiceModal");
+  if (modal) modal.style.display = "block";
+}
+
+function closeModal() {
+  const modal = document.getElementById("voiceModal");
+  if (modal) modal.style.display = "none";
+}
+
+function saveVoicePin() {
+  const input = document.getElementById("voiceInput");
+  const phrase = input?.value.trim() || "";
+  if (!phrase) {
+    showToast("Enter a voice phrase", "warning");
+    return;
+  }
+
+  localStorage.setItem("voicePhrase", phrase);
+  if (input) input.value = "";
+  closeModal();
+  showToast("Voice phrase saved");
 }
 
 // ── Logout Confirm ────────────────────────────────────────────────────────────

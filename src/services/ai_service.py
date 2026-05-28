@@ -1,4 +1,4 @@
-"""Shared AI generation service with local, Hugging Face API, and text fallback."""
+"""General AI generation service with local, Hugging Face API, and text fallback."""
 
 from __future__ import annotations
 
@@ -12,9 +12,13 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-MODEL_PATH = os.getenv("QWEN_DRAFT_LOCAL_PATH") or os.getenv("QWEN_LOCAL_PATH")
-HF_TOKEN = os.getenv("HF_TOKEN")
-HF_MODEL_NAME = os.getenv("HF_MODEL_NAME", "Qwen/Qwen2.5-1.5B-Instruct")
+MODEL_PATH = os.getenv("AI_LOCAL_PATH") or os.getenv("QWEN_LOCAL_PATH")
+HF_TOKEN = os.getenv("AI_HF_TOKEN") or os.getenv("HF_TOKEN")
+HF_MODEL_NAME = (
+    os.getenv("AI_HF_MODEL_NAME")
+    or os.getenv("HF_MODEL_NAME")
+    or "Qwen/Qwen2.5-1.5B-Instruct"
+)
 
 MODEL_MODE = "fallback"
 
@@ -180,13 +184,31 @@ def generate_hf_response(user_query: str) -> str:
     if _hf_client is None:
         raise RuntimeError("Hugging Face API client is not initialized.")
 
-    response = _hf_client.text_generation(
-        prompt=build_prompt(user_query),
-        max_new_tokens=150,
+    response = _hf_client.chat_completion(
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are an enterprise AI email assistant. "
+                    "Give concise and professional responses focused on email productivity."
+                ),
+            },
+            {
+                "role": "user",
+                "content": user_query,
+            },
+        ],
+        max_tokens=150,
         temperature=0.4,
     )
-    return str(response).strip()
 
+    return (
+        response
+        .choices[0]
+        .message
+        .content
+        .strip()
+    )
 
 def generate_response(user_query: str) -> str:
     """Generate text without making app startup depend on any model files."""
