@@ -5,6 +5,9 @@
 
 // ── Multi-file Attachment State ───────────────────────────────────────────────
 let selectedFiles = [];
+let composeSendLoading = false;
+let composeDraftLoading = false;
+let lastAiDraftState = null;
 
 function updateComposeCount() {
  const messageEl = document.getElementById("compose-message");
@@ -72,57 +75,121 @@ function loadPhoto(event) {
 }
 
 // ── Send Message ──────────────────────────────────────────────────────────────
-function sendComposeMessage() {
+function setButtonLoading(button, loading, loadingLabel) {
+ if (!button) return;
+ if (!button.dataset.defaultLabel) button.dataset.defaultLabel = button.textContent.trim();
+ button.disabled = loading;
+ const label = button.querySelector("span");
+ if (label) {
+   label.textContent = loading ? loadingLabel : button.dataset.defaultLabel;
+ } else {
+   button.textContent = loading ? loadingLabel : button.dataset.defaultLabel;
+ }
+}
+
+function clearComposeErrors() {
  const toEl = document.getElementById("compose-to");
  const msgEl = document.getElementById("compose-message");
  const toError = document.getElementById("to-error");
  const msgError = document.getElementById("message-error");
 
- // Clear previous errors
  if (toError) toError.textContent = "";
  if (msgError) msgError.textContent = "";
  toEl?.classList.remove("input-error");
  msgEl?.classList.remove("input-error");
+}
+
+function setComposeError(field, message) {
+ const errorId = field === "to" ? "to-error" : "message-error";
+ const fieldId = field === "to" ? "compose-to" : "compose-message";
+ const errorEl = document.getElementById(errorId);
+ const fieldEl = document.getElementById(fieldId);
+
+ if (errorEl) errorEl.textContent = message;
+ fieldEl?.classList.add("input-error");
+}
+
+async function readJsonResponse(response) {
+ try {
+   return await response.json();
+ } catch {
+   return {};
+ }
+}
+
+async function sendComposeMessage() {
+ if (composeSendLoading) return;
+
+ const toEl = document.getElementById("compose-to");
+ const msgEl = document.getElementById("compose-message");
+ const subjectEl = document.getElementById("compose-subject");
+ const channelEl = document.getElementById("compose-channel");
+ const scheduleEl = document.getElementById("compose-schedule");
+ const sendBtn = document.getElementById("compose-send-btn");
+
+ clearComposeErrors();
+
+ const channel = (channelEl?.value || "gmail").toLowerCase();
+ const to = (toEl?.value || "").trim();
+ const body = (msgEl?.value || "").trim();
+
+ if (!to) {
+   setComposeError("to", "Recipient is required");
+   return;
+ }
+
+ if (!body) {
+   setComposeError("message", "Message is required");
+   return;
+ }
+
+ if (!["gmail", "outlook"].includes(channel)) {
+   showToast("Sending via WhatsApp or Telegram is not supported yet", "warning");
+   return;
+ }
 
  const data = {
-   channel: document.getElementById("compose-channel")?.value,
-   to: toEl?.value,
-   subject: document.getElementById("compose-subject")?.value,
-   body: msgEl?.value,
-   schedule: document.getElementById("compose-schedule")?.value,
+   channel,
+   to,
+   subject: subjectEl?.value || "",
+   body,
+   schedule: scheduleEl?.value || "now",
  };
 
- fetch("/auth/send-message", {
-   method: "POST",
-   headers: { "Content-Type": "application/json" },
-   body: JSON.stringify(data),
- })
-   .then(async (res) => {
-     const response = await res.json();
+ const endpoint = channel === "gmail" ? "/api/send" : "/auth/send-message";
 
-     if (!res.ok) {
-       if (response.error?.includes("Recipient")) {
-         if (toError) toError.textContent = "Recipient is required";
-         toEl?.classList.add("input-error");
-       }
-       if (response.error?.includes("message")) {
-         if (msgError) msgError.textContent = "Message is required";
-         msgEl?.classList.add("input-error");
-       }
-       return;
-     }
+ composeSendLoading = true;
+ setButtonLoading(sendBtn, true, "Sending...");
 
-     showToast("✅ Message sent successfully");
-     if (toEl) toEl.value = "";
-     if (msgEl) msgEl.value = "";
-     const subjectEl = document.getElementById("compose-subject");
-     if (subjectEl) subjectEl.value = "";
-     updateComposeCount();
-   })
-   .catch((err) => {
-     console.error(err);
-     showToast("❌ Failed to send message", "error");
+ try {
+   const res = await fetch(endpoint, {
+     method: "POST",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify(data),
    });
+
+   const response = await readJsonResponse(res);
+
+   if (!res.ok) {
+     const error = response.error || response.message || "Failed to send message";
+     if (/recipient|to/i.test(error)) setComposeError("to", "Recipient is required");
+     if (/message|body/i.test(error)) setComposeError("message", "Message is required");
+     showToast(error, "error");
+     return;
+   }
+
+   showToast("Message sent successfully");
+   if (toEl) toEl.value = "";
+   if (msgEl) msgEl.value = "";
+   if (subjectEl) subjectEl.value = "";
+   updateComposeCount();
+ } catch (err) {
+   console.error(err);
+   showToast("Failed to send message", "error");
+ } finally {
+   composeSendLoading = false;
+   setButtonLoading(sendBtn, false, "Send");
+ }
 }
 
 function saveComposeDraft() {
@@ -140,53 +207,110 @@ function saveComposeDraft() {
 }
 
 // ── AI Write / Draft ──────────────────────────────────────────────────────────
-async function handleAiWrite() {
+function setAiDraftActionsVisible(visible) {
+ const undoBtn = document.getElementById("compose-ai-undo-btn");
+ const regenerateBtn = document.getElementById("compose-ai-regenerate-btn");
+ if (undoBtn) undoBtn.hidden = !visible;
+ if (regenerateBtn) regenerateBtn.hidden = !visible;
+}
+
+function parseDraft(draft) {
+ const subjectMatch = draft.match(/Subject:(.*)/i);
+ return {
+   subject: subjectMatch ? subjectMatch[1].trim() : "",
+   body: draft.replace(/Subject:.*\n?/i, "").trim() || draft,
+ };
+}
+
+async function requestAiDraft(prompt, tone = "professional") {
+ const res = await fetch("/api/compose/draft", {
+   method: "POST",
+   headers: { "Content-Type": "application/json" },
+   body: JSON.stringify({ prompt, tone }),
+ });
+
+ const data = await readJsonResponse(res);
+ if (!res.ok) throw new Error(data.error || "AI draft generation failed");
+ return data;
+}
+
+async function handleAiWrite(options = {}) {
+ if (composeDraftLoading) return;
+
  const subjectEl = document.getElementById("compose-subject");
  const messageEl = document.getElementById("compose-message");
+ const aiBtn = document.getElementById("compose-ai-write-btn");
+ const regenerateBtn = document.getElementById("compose-ai-regenerate-btn");
 
  if (!subjectEl || !messageEl) {
    console.error("Compose fields not found");
    return;
  }
 
- const prompt = messageEl.value || subjectEl.value;
+ const prompt = options.prompt || messageEl.value || subjectEl.value;
+ const tone = options.tone || "professional";
  if (!prompt.trim()) {
    showToast("Please type something first", "warning");
    return;
  }
 
- const originalText = messageEl.value;
- messageEl.value = "Generating AI draft...";
+ const previousBody =
+   options.previousBody !== undefined ? options.previousBody : messageEl.value;
+ const previousSubject =
+   options.previousSubject !== undefined ? options.previousSubject : subjectEl.value;
+
+ composeDraftLoading = true;
+ setButtonLoading(aiBtn, true, "Writing...");
+ setButtonLoading(regenerateBtn, true, "Regenerating...");
 
  try {
-   const res = await fetch("/api/compose/draft", {
-     method: "POST",
-     headers: { "Content-Type": "application/json" },
-     body: JSON.stringify({ prompt, tone: "professional" }),
-   });
+   const data = await requestAiDraft(prompt, tone);
+   const parsed = parseDraft(data.draft || "");
 
-   const data = await res.json();
-   console.log("API RESPONSE:", data);
-   if (!res.ok) throw new Error(data.error || "Failed");
-
-   const draft = data.draft || "";
-   const subjectMatch = draft.match(/Subject:(.*)/i);
-   if (subjectMatch) subjectEl.value = subjectMatch[1].trim();
-
-
-// ✅ SAFE FIX (important)
-   let cleanDraft = draft.replace(/Subject:.*\n?/i, "").trim();
-
-   // ✅ fallback if empty
-   messageEl.value = cleanDraft || draft;
+   if (parsed.subject) subjectEl.value = parsed.subject;
+   messageEl.value = parsed.body;
+   lastAiDraftState = {
+     prompt,
+     tone,
+     previousBody,
+     previousSubject,
+   };
    updateComposeCount();
+   setAiDraftActionsVisible(true);
 
-   showToast("✅ AI draft generated");
+   showToast("AI draft generated");
  } catch (err) {
    console.error(err);
-   messageEl.value = originalText;
-   showToast("❌ Draft generation failed", "error");
+   showToast(err.message || "Draft generation failed", "error");
+ } finally {
+   composeDraftLoading = false;
+   setButtonLoading(aiBtn, false, "AI Write");
+   setButtonLoading(regenerateBtn, false, "Regenerate");
  }
+}
+
+function undoAiDraft() {
+ if (!lastAiDraftState || composeDraftLoading) return;
+
+ const subjectEl = document.getElementById("compose-subject");
+ const messageEl = document.getElementById("compose-message");
+
+ if (subjectEl) subjectEl.value = lastAiDraftState.previousSubject || "";
+ if (messageEl) messageEl.value = lastAiDraftState.previousBody || "";
+
+ updateComposeCount();
+ setAiDraftActionsVisible(false);
+ showToast("AI draft undone");
+}
+
+function regenerateAiDraft() {
+ if (!lastAiDraftState || composeDraftLoading) return;
+ handleAiWrite({
+   prompt: lastAiDraftState.prompt,
+   tone: lastAiDraftState.tone,
+   previousBody: lastAiDraftState.previousBody,
+   previousSubject: lastAiDraftState.previousSubject,
+ });
 }
 
 // ── AI Input Key Handler ──────────────────────────────────────────────────────

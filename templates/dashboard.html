@@ -216,7 +216,7 @@
             <div id="dashboard-toolbar-actions" class="inbox-toolbar-actions">
               <button
                 class="tool-btn"
-                onclick="showToast('All messages marked as read')"
+                onclick="markAllRead()"
               >
                 ✓ Mark all read
               </button>
@@ -241,11 +241,13 @@
                 </button>
 
                 <div id="filterMenu" class="dropdown-menu">
+                  <div onclick="applyFilter('all')">All</div>
+
                   <div onclick="applyFilter('unread')">Unread</div>
 
-                  <div onclick="applyFilter('unread')">Starred</div>
+                  <div onclick="applyFilter('starred')">Starred</div>
 
-                  <div onclick="applyFilter('unread')">Today</div>
+                  <div onclick="applyFilter('today')">Today</div>
                 </div>
               </div>
             </div>

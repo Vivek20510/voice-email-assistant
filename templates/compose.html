@@ -107,6 +107,7 @@
           <button
             type="button"
             class="compose-soft-btn"
+            id="compose-ai-write-btn"
             onclick="handleAiWrite()"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -116,6 +117,42 @@
             </svg>
 
             <span>AI Write</span>
+          </button>
+
+          <button
+            type="button"
+            class="compose-soft-btn"
+            id="compose-ai-undo-btn"
+            onclick="undoAiDraft()"
+            hidden
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 8H5v-4" />
+
+              <path d="M5 8c2.5-3 7-4 10.5-1.8 3.8 2.4 4.4 7.8 1.2 10.9-2.6 2.5-6.8 2.6-9.6.3" />
+            </svg>
+
+            <span>Undo AI</span>
+          </button>
+
+          <button
+            type="button"
+            class="compose-soft-btn"
+            id="compose-ai-regenerate-btn"
+            onclick="regenerateAiDraft()"
+            hidden
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 12a8 8 0 0 1-13.6 5.7" />
+
+              <path d="M4 12A8 8 0 0 1 17.6 6.3" />
+
+              <path d="M17 3v4h4" />
+
+              <path d="M7 21v-4H3" />
+            </svg>
+
+            <span>Regenerate</span>
           </button>
 
           <button
@@ -184,6 +221,7 @@
         <button
           type="button"
           class="compose-send-btn"
+          id="compose-send-btn"
           onclick="sendComposeMessage()"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">

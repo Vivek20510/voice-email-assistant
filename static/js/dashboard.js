@@ -18,6 +18,10 @@ let currentDashboardView = "sb-inbox";
 
 let miniMessageListScrollTop = 0;
 
+let activeInboxSort = "newest";
+
+let activeInboxFilter = "all";
+
 // ── View Metadata ─────────────────────────────────────────────────────────────
 
 const dashboardViewTitles = {
@@ -170,7 +174,7 @@ function updateInboxUnreadBadge() {
 
   if (!badge) return;
 
-  const messages = inboxMessagesCacheByChannel.all || inboxMessagesCache || [];
+  const messages = allCachedMessages();
 
   const unreadCount = messages.filter((m) => m.unread).length;
 
@@ -205,6 +209,37 @@ function getCachedInboxMessages(cacheKey, channel = cacheKey) {
   return null;
 }
 
+function viewCacheKey(viewId = currentDashboardView) {
+  const channel = channelForView(viewId);
+
+  return `${channel}_${viewId}`;
+}
+
+function currentCachedMessages() {
+  const cacheKey = viewCacheKey();
+
+  return inboxMessagesCacheByChannel[cacheKey] || inboxMessagesCache || [];
+}
+
+function allCachedMessages() {
+  const messagesById = new Map();
+
+  Object.values(inboxMessagesCacheByChannel).forEach((messages) => {
+    if (!Array.isArray(messages)) return;
+    messages.forEach((message) => {
+      if (!message || !message.id) return;
+      messagesById.set(String(message.id), message);
+    });
+  });
+
+  (inboxMessagesCache || []).forEach((message) => {
+    if (!message || !message.id) return;
+    messagesById.set(String(message.id), message);
+  });
+
+  return Array.from(messagesById.values());
+}
+
 function findCachedMessage(messageId) {
   const channel = channelForView(currentDashboardView);
 
@@ -226,6 +261,34 @@ function markMessageRead(messageId) {
   });
 
   updateInboxUnreadBadge();
+}
+
+function markAllRead() {
+  const messages = currentCachedMessages();
+
+  if (!messages.length) {
+    showToast("No loaded messages to mark read", "warning");
+    return;
+  }
+
+  const markRead = (message) => ({
+    ...message,
+    unread: false,
+    labels: Array.isArray(message.labels)
+      ? message.labels.filter((label) => label !== "UNREAD")
+      : message.labels,
+  });
+
+  inboxMessagesCache = inboxMessagesCache.map(markRead);
+
+  Object.keys(inboxMessagesCacheByChannel).forEach((key) => {
+    inboxMessagesCacheByChannel[key] =
+      inboxMessagesCacheByChannel[key].map(markRead);
+  });
+
+  updateInboxUnreadBadge();
+  renderCurrentInboxMessages();
+  showToast("All loaded messages marked as read");
 }
 
 // ── Formatting Helpers ────────────────────────────────────────────────────────
@@ -331,6 +394,115 @@ function formatInboxTime(value) {
   if (parsed >= startOfYesterday) return "Yesterday";
 
   return parsed.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+function parseMessageDate(value) {
+  if (!value) return 0;
+
+  const parsed = new Date(value);
+
+  return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+}
+
+function isTodayMessage(message) {
+  const timestamp = parseMessageDate(message?.received_at || message?.date);
+
+  if (!timestamp) return false;
+
+  const parsed = new Date(timestamp);
+
+  const now = new Date();
+
+  return (
+    parsed.getFullYear() === now.getFullYear() &&
+    parsed.getMonth() === now.getMonth() &&
+    parsed.getDate() === now.getDate()
+  );
+}
+
+function isStarredMessage(message) {
+  if (message?.starred || message?.is_starred) return true;
+
+  const labels = Array.isArray(message?.labels) ? message.labels : [];
+
+  return labels.some((label) => String(label).toUpperCase() === "STARRED");
+}
+
+function sortedMessages(messages, sortType = activeInboxSort) {
+  const nextMessages = [...messages];
+
+  if (sortType === "oldest") {
+    return nextMessages.sort(
+      (a, b) =>
+        parseMessageDate(a.received_at || a.date) -
+        parseMessageDate(b.received_at || b.date),
+    );
+  }
+
+  if (sortType === "sender") {
+    return nextMessages.sort((a, b) => {
+      const senderA = String(a.sender || a.sender_email || "").toLowerCase();
+      const senderB = String(b.sender || b.sender_email || "").toLowerCase();
+
+      return senderA.localeCompare(senderB);
+    });
+  }
+
+  return nextMessages.sort(
+    (a, b) =>
+      parseMessageDate(b.received_at || b.date) -
+      parseMessageDate(a.received_at || a.date),
+  );
+}
+
+function filteredMessages(messages, filterType = activeInboxFilter) {
+  if (filterType === "unread") return messages.filter((message) => message.unread);
+
+  if (filterType === "starred") return messages.filter(isStarredMessage);
+
+  if (filterType === "today") return messages.filter(isTodayMessage);
+
+  return messages;
+}
+
+function renderFilteredInboxEmpty(filterType) {
+  const labels = {
+    unread: "unread messages",
+    starred: "starred messages",
+    today: "messages from today",
+  };
+
+  setDashboardMessageMode(false);
+
+  setInboxContent(`
+
+    <div class="inbox-feedback" data-state="empty">
+
+      <h3>No ${escapeHtml(labels[filterType] || "messages")}</h3>
+
+      <p>The current loaded message list has no matches for this filter.</p>
+
+    </div>
+
+  `);
+}
+
+function renderCurrentInboxMessages() {
+  const baseMessages = currentCachedMessages();
+
+  if (!baseMessages.length) {
+    renderInboxEmpty();
+    return;
+  }
+
+  const messages = sortedMessages(filteredMessages(baseMessages));
+
+  if (!messages.length) {
+    renderFilteredInboxEmpty(activeInboxFilter);
+    return;
+  }
+
+  renderInboxMessages(messages);
 }
 
 function getInboxGroupLabel(value) {
@@ -610,7 +782,7 @@ async function loadInboxMessages() {
 
     inboxMessagesCache = messages;
 
-    const cacheKey = `${channel}_${currentDashboardView}`;
+    const cacheKey = viewCacheKey();
 
     inboxMessagesCacheByChannel[cacheKey] = messages;
 
@@ -623,7 +795,7 @@ async function loadInboxMessages() {
       return;
     }
 
-    renderInboxMessages(messages);
+    renderCurrentInboxMessages();
   } catch {
     renderInboxError("Network error while loading inbox.");
   }
@@ -639,14 +811,14 @@ function restoreInboxList() {
 
   const channel = channelForView(currentDashboardView);
 
-  const cacheKey = `${channel}_${currentDashboardView}`;
+  const cacheKey = viewCacheKey();
 
   const cachedMessages = inboxMessagesCacheByChannel[cacheKey] || [];
 
   if (cachedMessages.length) {
     inboxMessagesCache = cachedMessages;
 
-    renderInboxMessages(cachedMessages);
+    renderCurrentInboxMessages();
 
     return;
   }
@@ -666,14 +838,14 @@ function switchSidebar(itemId) {
   if (mailViews.has(itemId)) {
     const channel = channelForView(itemId);
 
-    const cacheKey = `${channel}_${itemId}`;
+    const cacheKey = viewCacheKey(itemId);
 
     const cachedMessages = inboxMessagesCacheByChannel[cacheKey] || [];
 
     if (cachedMessages.length) {
       inboxMessagesCache = cachedMessages;
 
-      renderInboxMessages(cachedMessages);
+      renderCurrentInboxMessages();
 
       return;
     }
@@ -699,12 +871,42 @@ function toggleMenu(menuId) {
 }
 
 function applySort(type) {
-  showToast("Sort applied: " + type);
+  activeInboxSort = ["newest", "oldest", "sender"].includes(type)
+    ? type
+    : "newest";
+
+  renderCurrentInboxMessages();
+  showToast("Sort applied: " + activeInboxSort);
   closeMenus();
 }
 
 function applyFilter(type) {
-  showToast("Filter applied: " + type);
+  activeInboxFilter = ["unread", "starred", "today", "all"].includes(type)
+    ? type
+    : "all";
+
+  renderCurrentInboxMessages();
+  showToast("Filter applied: " + activeInboxFilter);
+  closeMenus();
+}
+
+function applyFilterPayload(payload = {}) {
+  if (payload.unread) activeInboxFilter = "unread";
+  else if (payload.today) activeInboxFilter = "today";
+  else activeInboxFilter = "all";
+
+  if (payload.channel === "gmail") {
+    switchSidebar("sb-emails");
+    return;
+  }
+
+  if (payload.channel === "outlook") {
+    switchSidebar("sb-outlook");
+    return;
+  }
+
+  renderCurrentInboxMessages();
+  showToast("Filter applied: " + activeInboxFilter);
   closeMenus();
 }
 
@@ -823,12 +1025,14 @@ if (typeof window !== "undefined") {
       loadMessageDetail(targetId);
       return true;
     },
-    applyFilter: ({ view, filter } = {}) => {
+    applyFilter: (payload = {}) => {
+      const { view, filter } = payload;
       if (view && mailViews.has(view)) {
         switchSidebar(view);
         return true;
       }
-      if (filter) applyFilter(filter);
+      if (filter && typeof filter === "string") applyFilter(filter);
+      else applyFilterPayload(payload);
       return true;
     },
     markReadLocal: ({ message_id: messageId, id } = {}) => {
