@@ -24,6 +24,12 @@ class User(db.Model):
     conversations = db.relationship(
         "Conversation", back_populates="user", cascade="all, delete-orphan"
     )
+    preferences = db.relationship(
+        "UserPreference",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
 
     def __repr__(self):
         return f"<User id={self.id} email={self.email}>"
@@ -47,6 +53,35 @@ class UserToken(db.Model):
 
     def __repr__(self):
         return f"<UserToken id={self.id} service={self.service} user_id={self.user_id}>"
+
+
+class UserPreference(db.Model):
+    """Per-user application preferences."""
+
+    __tablename__ = "user_preferences"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        unique=True,
+        nullable=False,
+    )
+    ai_data_usage_enabled = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    user = db.relationship("User", back_populates="preferences")
+
+    def __repr__(self):
+        return (
+            f"<UserPreference user_id={self.user_id} "
+            f"ai_data_usage_enabled={self.ai_data_usage_enabled}>"
+        )
 
 
 class Conversation(db.Model):

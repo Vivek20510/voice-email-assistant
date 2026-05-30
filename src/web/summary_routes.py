@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 
 from src.services.summary_service import SummarizerEngine
+from src.web.ai_guard import require_ai_data_usage_enabled
 
 summary_bp = Blueprint("summary", __name__, url_prefix="/ai")
 
@@ -41,6 +42,10 @@ def _summary_input(payload: dict) -> str:
 
 @summary_bp.route("/summary", methods=["POST"])
 def summarize():
+    disabled_response = require_ai_data_usage_enabled()
+    if disabled_response:
+        return disabled_response
+
     data = request.get_json(silent=True)
     if data is None:
         return _json_error("Valid JSON payload required.")

@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_summarize_route_returns_summary(client):
     response = client.post(
         "/nlp/summarize", json={"text": "This is a test email body."}
@@ -385,3 +388,60 @@ def test_legacy_ai_draft_route_still_forwards_to_compose_draft(client, monkeypat
     assert response.status_code == 200
     assert response.json["success"] is True
     assert response.json["draft"].startswith("Hello")
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "payload"),
+    [
+        ("/api/ai-panel/query", {"query": "hello ai", "emails": []}),
+        ("/api/compose/draft", {"prompt": "Draft a project update."}),
+        ("/nlp/summarize", {"text": "Summarize this."}),
+        ("/nlp/suggest", {"text": "Suggest a reply."}),
+        ("/nlp/assistant", {"query": "Help me."}),
+        ("/nlp/ai-query", {"query": "hello ai", "emails": []}),
+        ("/nlp/ai-draft", {"prompt": "Draft a project update."}),
+        ("/ai/summary", {"text": "Summarize this."}),
+    ],
+)
+def test_ai_routes_return_403_when_ai_data_usage_disabled(
+    client,
+    monkeypatch,
+    endpoint,
+    payload,
+):
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("AI service should not be called when disabled")
+
+    class FailingSummaryEngine:
+        def generate_summary(self, text):
+            fail_if_called(text)
+
+    monkeypatch.setattr("src.web.ai_panel_routes.generate_response", fail_if_called)
+    monkeypatch.setattr(
+        "src.web.ai_panel_routes._fetch_connected_mail_context",
+        fail_if_called,
+    )
+    monkeypatch.setattr(
+        "src.web.compose_routes.qwen_draft_service.generate_qwen_drafts",
+        fail_if_called,
+    )
+    monkeypatch.setattr("src.web.nlp_routes.generate_response", fail_if_called)
+    monkeypatch.setattr("src.web.nlp_routes.summarize_text", fail_if_called)
+    monkeypatch.setattr("src.web.nlp_routes.suggest_replies", fail_if_called)
+    monkeypatch.setattr("src.web.summary_routes.engine", FailingSummaryEngine())
+
+    client.post(
+        "/auth/signup",
+        json={"email": "ai-disabled@example.com", "password": "SecurePass123"},
+    )
+    client.post("/auth/update-privacy-preferences", json={"ai_data_usage_enabled": False})
+
+    response = client.post(endpoint, json=payload)
+
+    assert response.status_code == 403
+    assert response.json == {
+        "success": False,
+        "error": "AI Data Usage is disabled in Privacy & Security settings.",
+        "code": 403,
+        "ai_data_usage_enabled": False,
+    }

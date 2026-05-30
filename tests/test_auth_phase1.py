@@ -1,7 +1,7 @@
 from urllib.parse import parse_qs, urlparse
 
 from src.db import db
-from src.models import User, UserToken
+from src.models import User, UserPreference, UserToken
 
 
 def test_signup_and_status(client):
@@ -417,3 +417,39 @@ def test_message_view_renders_placeholder_content(client):
     assert b"|tojson" not in response.data
     assert b"{{" not in response.data
     assert b'fetch("/nlp/summarize"' not in response.data
+
+
+def test_privacy_preferences_can_disable_and_enable_ai_data_usage(client, app):
+    client.post(
+        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+    )
+
+    disabled_response = client.post("/auth/update-privacy-preferences", data={})
+
+    assert disabled_response.status_code == 302
+    assert (
+        "/auth/dashboard?page=settings&tab=security"
+        in disabled_response.headers["Location"]
+    )
+
+    with app.app_context():
+        user = User.query.filter_by(email="user@example.com").first()
+        preference = UserPreference.query.filter_by(user_id=user.id).first()
+        assert preference.ai_data_usage_enabled is False
+
+    disabled_page = client.get("/auth/dashboard?page=settings&tab=security")
+    assert b'name="ai_data_usage_enabled" checked' not in disabled_page.data
+
+    enabled_response = client.post(
+        "/auth/update-privacy-preferences",
+        json={"ai_data_usage_enabled": True},
+    )
+
+    assert enabled_response.status_code == 200
+    assert enabled_response.json == {
+        "success": True,
+        "ai_data_usage_enabled": True,
+    }
+
+    enabled_page = client.get("/auth/dashboard?page=settings&tab=security")
+    assert b'name="ai_data_usage_enabled" checked' in enabled_page.data

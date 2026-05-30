@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 
 from src.services import qwen_draft_service
+from src.web.ai_guard import require_ai_data_usage_enabled
 
 compose_bp = Blueprint("compose_api", __name__, url_prefix="/api/compose")
 
@@ -21,6 +22,10 @@ def _clean_text(value, field_name: str | None = None):
 
 @compose_bp.route("/draft", methods=["POST"])
 def compose_draft():
+    disabled_response = require_ai_data_usage_enabled()
+    if disabled_response:
+        return disabled_response
+
     payload = request.get_json(silent=True)
     if not payload or not isinstance(payload, dict):
         return _json_error("Valid JSON payload required.")

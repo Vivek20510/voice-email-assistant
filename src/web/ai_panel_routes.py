@@ -6,6 +6,7 @@ from flask import Blueprint, jsonify, request, session
 from src.services.ai_service import MODEL_MODE, generate_response
 from src.services.email_service import list_emails as list_gmail_emails
 from src.services.outlook_service import list_emails as list_outlook_emails
+from src.web.ai_guard import require_ai_data_usage_enabled
 
 ai_panel_bp = Blueprint("ai_panel", __name__, url_prefix="/api/ai-panel")
 
@@ -602,6 +603,10 @@ def _most_relevant_email(emails: list[dict], query: str, active_message_id: str 
 
 @ai_panel_bp.route("/query", methods=["POST"])
 def ai_query():
+    disabled_response = require_ai_data_usage_enabled()
+    if disabled_response:
+        return disabled_response
+
     payload = request.get_json(silent=True)
     if not payload or not isinstance(payload, dict):
         return _json_error("Valid JSON payload required.")

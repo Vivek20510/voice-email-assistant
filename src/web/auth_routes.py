@@ -26,6 +26,10 @@ from src.services.auth import (
 )
 
 from src.services.outlook_service import connect_outlook
+from src.services.preferences import (
+    get_user_preference,
+    set_ai_data_usage_enabled,
+)
 
 import win32com.client as win32
 
@@ -84,6 +88,7 @@ def _settings_context(**extra):
     gmail_token = _gmail_token_for_user(session.get("user_id"))
 
     outlook_token = _outlook_token_for_user(session.get("user_id"))
+    preference = get_user_preference(session.get("user_id"))
 
     context = {
         "email": session.get("user_email"),
@@ -102,6 +107,11 @@ def _settings_context(**extra):
             "desktop_notifications": True,
             "notification_sound": True,
             "dnd_schedule": "off",
+            "ai_data_usage_enabled": (
+                True
+                if preference is None
+                else bool(preference.ai_data_usage_enabled)
+            ),
         },
     }
 
@@ -455,6 +465,35 @@ def settings():
         return redirect(url_for("auth.login_form"))
 
     return redirect(_dashboard_url(page="settings", tab="channels"))
+
+
+@auth_bp.route("/update-privacy-preferences", methods=["POST"])
+def update_privacy_preferences():
+
+    user = _current_user()
+
+    if user is None:
+
+        return _json_error("Unauthorized.", 401)
+
+    data = _request_data()
+    if request.is_json:
+        enabled = bool(data.get("ai_data_usage_enabled"))
+    else:
+        enabled = data.get("ai_data_usage_enabled") == "on"
+
+    preference = set_ai_data_usage_enabled(user.id, enabled)
+
+    if request.is_json:
+
+        return jsonify(
+            {
+                "success": True,
+                "ai_data_usage_enabled": bool(preference.ai_data_usage_enabled),
+            }
+        )
+
+    return redirect(_dashboard_url(page="settings", tab="security"))
 
 
 @auth_bp.route("/compose", methods=["GET"])

@@ -835,6 +835,7 @@
     <!-- Privacy Section -->
 
     <div id="spanel-security" class="settings-section hidden">
+      <form method="POST" action="/auth/update-privacy-preferences">
 
       <div class="settings-section-title">Privacy & Security</div>
 
@@ -852,7 +853,10 @@
 
           </div>
 
-          <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+          <label class="toggle">
+            <input type="checkbox" name="ai_data_usage_enabled" {{ 'checked' if prefs.ai_data_usage_enabled else '' }}>
+            <span class="toggle-slider"></span>
+          </label>
 
         </div>
 
@@ -866,7 +870,7 @@
 
           </div>
 
-          <button class="btn-cancel" style="font-size:12px;" onclick="openChangePassword()">Update</button>
+          <button type="button" class="btn-cancel" style="font-size:12px;" onclick="openChangePassword()">Update</button>
 
         </div>
 
@@ -880,7 +884,7 @@
 
           </div>
 
-          <button class="btn-cancel" style="font-size:12px;" onclick="openVoiceModal()">Update</button>
+          <button type="button" class="btn-cancel" style="font-size:12px;" onclick="openVoiceModal()">Update</button>
 
         </div>
 
@@ -888,11 +892,13 @@
 
       <div class="settings-save-row">
 
-        <button class="btn-save" onclick="showToast('✓ Privacy settings saved')">Save Changes</button>
+        <button type="submit" class="btn-save">Save Changes</button>
 
-        <button class="btn-cancel">Cancel</button>
+        <button type="button" class="btn-cancel" onclick="location.reload()">Cancel</button>
 
       </div>
+
+      </form>
 
     </div>
 

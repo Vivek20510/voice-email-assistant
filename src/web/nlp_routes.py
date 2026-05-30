@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 
 from src.services.ai_service import MODEL_MODE, generate_response
 from src.services.nlp_service import summarize_text, suggest_replies
+from src.web.ai_guard import require_ai_data_usage_enabled
 from src.web.ai_panel_routes import ai_query as ai_panel_query
 from src.web.compose_routes import compose_draft as compose_draft_handler
 
@@ -36,6 +37,10 @@ def health():
 
 @nlp_bp.route("/summarize", methods=["POST"])
 def summarize():
+    disabled_response = require_ai_data_usage_enabled()
+    if disabled_response:
+        return disabled_response
+
     payload = request.get_json(silent=True)
     if payload is None:
         return _json_error("Valid JSON payload required.")
@@ -68,6 +73,10 @@ def summarize():
 
 @nlp_bp.route("/suggest", methods=["POST"])
 def suggest():
+    disabled_response = require_ai_data_usage_enabled()
+    if disabled_response:
+        return disabled_response
+
     payload = request.get_json(silent=True)
     if not payload or not isinstance(payload, dict):
         return _json_error("Valid JSON payload required.")
@@ -90,6 +99,10 @@ def suggest():
 
 @nlp_bp.route("/assistant", methods=["POST"])
 def assistant():
+    disabled_response = require_ai_data_usage_enabled()
+    if disabled_response:
+        return disabled_response
+
     payload = request.get_json(silent=True)
     if not payload or not isinstance(payload, dict):
         return _json_error("Valid JSON payload required.")
@@ -120,10 +133,18 @@ def assistant():
 @nlp_bp.route("/ai-query", methods=["POST"])
 def ai_query():
     """Temporary compatibility wrapper for /api/ai-panel/query."""
+    disabled_response = require_ai_data_usage_enabled()
+    if disabled_response:
+        return disabled_response
+
     return ai_panel_query()
 
 
 @nlp_bp.route("/ai-draft", methods=["POST"])
 def ai_draft():
     """Temporary compatibility wrapper for /api/compose/draft."""
+    disabled_response = require_ai_data_usage_enabled()
+    if disabled_response:
+        return disabled_response
+
     return compose_draft_handler()
