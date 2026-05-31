@@ -1,353 +1,252 @@
-# PLAN.md — Sprint 1 (Starting from Scratch)
+# 🎙️ Voice-Based Email & Messaging Assistant
 
-## Voice-Based Email & Messaging Assistant
+[![Python Version](https://img.shields.io/badge/Python-3.10%20%7C%203.11-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
+[![Framework](https://img.shields.io/badge/Flask-2.3+-black?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![AI Engine](https://img.shields.io/badge/AI%20%2F%20ML-PyTorch%20%7C%20HuggingFace%20%7C%20Whisper-orange?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org)
+[![Docker](https://img.shields.io/badge/Docker-Enabled-blue?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com)
 
----
+An elegant, premium-grade AI-powered dashboard that consolidates **Gmail**, **Outlook**, and **Telegram** into a unified, voice-controlled communications hub. Users can manage their inboxes hands-free through state-of-the-art voice dictation, text-to-speech audio playbacks, automated smart AI suggestions, multi-lingual translations, and deep message summarization.
 
-## Sprint Overview
-
-| Field                        | Details                                                                                                                                                                                    |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Sprint Number**            | Sprint 1 of 6                                                                                                                                                                              |
-| **Duration**                 | 5 working days (1 week)                                                                                                                                                                    |
-| **Scrum Master & Tech Lead** | Vivek Badodiya                                                                                                                                                                             |
-| **Sprint Goal**              | Repo is live with branch strategy, Flask app runs locally, SQLite DB with User model, auth routes (login/signup) work with bcrypt, CI pipeline is green, base frontend templates in place. |
-| **Status**                   | 🔄 Not Started                                                                                                                                                                             |
+Designed with a stunning responsive layout, fluid CSS micro-animations, theme persistence, and modular services, this application represents the modern standard for accessibility-first messaging utilities.
 
 ---
 
-## Team & Roles
+## 🌟 Core Highlights
 
-| Member                  | Role                                 | Notes                                                |
-| ----------------------- | ------------------------------------ | ---------------------------------------------------- |
-| **Vivek Badodiya**      | Scrum Master + Tech Lead             | Ceremonies, repo setup, PLAN.md, reviews, unblocking |
-| Urmila Uttam Barkade    | Backend Developer 1                  | Flask app factory, auth routes, bcrypt               |
-| Tummala Narasimhulu     | Backend Developer 2 + AI/ML Engineer | Models, DB, NLP stubs (dual role)                    |
-| Penke Durga Prasad      | Frontend Developer 1                 | HTML templates, CSS                                  |
-| Jagadeesh               | Frontend Developer 2 + Testing Lead  | error.html, pytest tests                             |
-| Saniya Sulthana / Kiran | DevOps Engineer                      | CI/CD pipeline, .env setup                           |
+### 1. 🎙️ Voice-Command & Dictation Console
+*   **Speech-to-Text (STT):** Dictate compose forms and replies directly via your browser. Integrated with **OpenAI Whisper** for high-accuracy local transcription, accompanied by a dynamic, real-time CSS waveform visualizer.
+*   **Text-to-Speech (TTS):** Read messages aloud at the click of a button using Google's Text-to-Speech (**gTTS**) system, keeping you informed on the go.
 
----
+### 2. 🤖 Deep AI Inbox Assistant
+*   **Smart Drafting:** Draft professional replies instantly. The platform leverages a local **Qwen-2.5 (1.5B/7B)** or HuggingFace API instruction model to generate structured drafts based on short voice hints.
+*   **Thread Summarizer:** Transform long email threads or chat history into concise, readable summaries via fine-tuned **BART/T5** pipeline inference.
+*   **Suggested Reply Chips:** Read a message and instantly pick from dynamically generated smart action buttons (e.g., *Accept Invite*, *Ask for details*, *Polite Decline*) that automatically pre-fill your composer.
+*   **Multilingual Translations:** Read and reply across barriers using integrated **mBART-50** and **NLLB** models, enabling many-to-many instant translations.
 
-## Sprint Ceremonies
+### 3. 🔄 Multi-Channel Sync
+*   **Google OAuth & Gmail API:** Fully authenticated secure OAuth 2.0 flow. Synchronize real-time Gmail inbox folders, read messages, compose drafts, and send mail securely.
+*   **Microsoft Outlook Integration:** Direct API interface for fetching and dispatching Outlook mail.
+*   **Telegram Webhooks:** Connect custom Telegram bots to monitor incoming messages and reply directly from the centralized application dashboard.
 
-| Ceremony             | When                | Duration | Owner |
-| -------------------- | ------------------- | -------- | ----- |
-| Sprint Planning      | Day 1 — 9:00 AM     | 1 hour   | Vivek |
-| Daily Stand-up       | Every day — 9:30 AM | 15 min   | Vivek |
-| Sprint Review        | Day 5 — 2:00 PM     | 45 min   | Vivek |
-| Sprint Retrospective | Day 5 — 3:00 PM     | 30 min   | Vivek |
-
----
-
-# Sprint Backlog – Day by Day
-
-## Day 1 – Monday (Environment & Barebones)
-
-**Goal:** Repo structure, Flask runs locally, SQLite connected, base templates.
-
-### 🟣 Vivek (Scrum Master + Tech Lead)
-
-- [ ] Create GitHub repo `voice-email-assistant` (already done, but ensure clone works).
-- [ ] Define branch strategy: `main` (production), `dev` (integration), `feature/*`.
-- [ ] Push initial `README.md` and this `PLAN.md`.
-- [ ] Create `.gitignore` with `__pycache__/`, `*.pyc`, `.env`, `data.db`, `instance/`, `.coverage`, `htmlcov/`.
-
-### 🔵 Urmila (Backend Dev 1)
-
-- [ ] Set up Flask app factory in `src/app.py` with `/health` route.
-- [ ] Verify app runs locally: `python run.py` → `http://localhost:5000/health` returns `{"status":"ok"}`.
-
-### 🟢 Tummala (Backend Dev 2)
-
-- [ ] Initialize SQLAlchemy in `src/db.py` (engine, session, `init_db()` stub).
-- [ ] Create stub `src/models.py` with empty `User` class.
-- [ ] Connect SQLite to Flask app in `src/app.py`.
-
-### 🟠 Penke (Frontend Dev 1)
-
-- [ ] Create `templates/base.html` with navigation (Home, Login, Signup) and placeholder content.
-- [ ] Add `static/css/style.css` with CSS reset and basic styling.
-
-### 🟡 Jagadeesh (Testing Lead + FE Dev 2)
-
-- [ ] Create `templates/error.html` (generic error page).
-- [ ] Write `test/test_app.py` with a simple test for `/health` endpoint.
-
-### 🩷 Tummala (AI/ML – optional spike)
-
-- [ ] Verify HuggingFace environment can load `flan-t5-small` locally (no code commit needed – just exploration).
-
-### 💜 Saniya / Kiran (DevOps)
-
-- [ ] Configure `.github/workflows/python-app.yml` with basic CI (install dependencies, run pytest).
+### 4. 🎨 Sleek, Responsive Interface
+*   **Dynamic Theme Toggle:** Instantly switch between premium, harmonious Dark Mode and Light Mode with settings persisted across sessions in `localStorage`.
+*   **Glassmorphism Panels:** Modern, translucent card aesthetics with sophisticated layout densities and smooth micro-animations.
+*   **Fluid SPA Router:** Zero-latency Single Page Application feel, built with Vanilla JavaScript and decoupled CSS modules.
 
 ---
 
-## Day 2 – Tuesday (Auth Routes & User Model)
+## 📂 Project Directory Structure
 
-**Goal:** User model complete, bcrypt hashing, login/signup endpoints, basic forms.
-
-### 🟣 Vivek
-
-- [ ] Review Day 1 commits, ensure branch strategy is followed.
-- [ ] Update `PLAN.md` with any changes.
-
-### 🔵 Urmila
-
-- [ ] Implement login & signup routes in `src/web/auth_routes.py`.
-- [ ] Use bcrypt password hashing (create `src/services/auth.py` with `hash_password`, `verify_password`).
-- [ ] Connect routes to `User` model (import from `models.py`).
-
-### 🟢 Tummala (Backend Dev 2)
-
-- [ ] Flesh out `models.py` with full `User` model: `id`, `email`, `password_hash`, `created_at`.
-- [ ] Write a simple migration script or use `init_db()` to create `users` table.
-- [ ] Verify DB connection with SQLite (e.g., `data.db` appears).
-
-### 🟠 Penke
-
-- [ ] Build `templates/login.html` (email + password form, OAuth button placeholder).
-- [ ] Build `templates/signup.html` (similar, with client‑side validation).
-- [ ] Connect both to `base.html` layout.
-
-### 🟡 Jagadeesh
-
-- [ ] Write pytest tests for `/login` and `/signup` (valid + invalid cases) in `test/test_auth_phase1.py`.
-- [ ] Expand test suite to cover duplicate email, missing fields.
-
-### 🩷 Tummala (AI/ML)
-
-- [ ] Create stub `src/services/nlp_service.py` with `summarize_text()` and `suggest_replies()` (return placeholder strings/lists).
-- [ ] Add a placeholder test script to verify HuggingFace model loads (optional).
-
-### 💜 Saniya / Kiran
-
-- [ ] Update CI pipeline to run auth tests.
-- [ ] Add `.env.example` with `FLASK_SECRET_KEY`, `DATABASE_URL`.
-- [ ] Ensure pipeline passes (may require mocking or environment variables).
-
----
-
-## Day 3 – Wednesday (Session, Dashboard, UserToken, Voice Stub)
-
-**Goal:** Session management, dashboard route, UserToken & EmailMessage models, voice transcription stub, test coverage.
-
-### 🟣 Vivek
-
-- [ ] Review and merge Day 2 PRs into `dev`, resolve any conflicts on `models.py`.
-- [ ] Implement `/auth/logout` (clear session, return 200) and `/auth/status` (return user info or 401) in `auth_routes.py`.
-- [ ] Enforce consistent JSON error response shape: `{"error": "...", "code": <status>}` across all auth routes.
-
-### 🔵 Urmila
-
-- [ ] Add session management to login/signup: set `session['user_id']` and `session['user_email']` on success.
-- [ ] Add `/dashboard` route (auth‑guarded): render `dashboard.html` if session active, else redirect to `/auth/login`.
-- [ ] Add input validation to signup/login: return HTTP 400 for missing fields, HTTP 409 for duplicate email.
-
-### 🟢 Tummala (Backend Dev 2)
-
-- [ ] Add `UserToken` model to `models.py`: `id`, `user_id` (FK), `service`, `access_token`, `refresh_token`, `expires_at`, `created_at`.
-- [ ] Add `EmailMessage` model stub: `id`, `user_id` (FK), `gmail_id`, `subject`, `body`, `to`, `created_at`.
-- [ ] Run `init_db()` and confirm 3 tables exist: `users`, `user_tokens`, `email_messages`.
-
-### 🟠 Penke
-
-- [ ] Build `templates/dashboard.html` shell: three‑column layout (sidebar | inbox | voice panel), empty state, hardcoded service status (Gmail 🔴 / Telegram 🔴).
-- [ ] Update `base.html` nav: show Compose, Settings, Logout only when `session.user_id` is present.
-- [ ] Add dashboard CSS: CSS Grid (`250px 1fr 300px`), responsive single‑column below 768px.
-
-### 🟡 Jagadeesh
-
-- [ ] Write tests for session management: login → session set → `/auth/status` returns user info.
-- [ ] Write test for auth guard: `/dashboard` without session → 302 redirect to `/auth/login`.
-- [ ] Write test for `/auth/logout`: login → logout → `/auth/status` returns 401.
-
-### 🩷 Tummala (AI/ML)
-
-- [ ] Implement `transcribe_audio(file_path, language=None)` stub in `src/services/voice.py` using `whisper.load_model("tiny")`. Return `{"text": ..., "language": ..., "segments": [...]}`.
-- [ ] Write unit test for `transcribe_audio` that mocks `whisper.load_model` and `model.transcribe`.
-
-### 💜 Saniya / Kiran
-
-- [ ] Add per‑test in‑memory SQLite fixture to `test/conftest.py` to prevent shared DB state.
-- [ ] Confirm CI still passes after new tests are added; check no session or DB leakage.
-
----
-
-## Day 4 – Thursday (Telegram Models, Compose Page, NLP Routes)
-
-**Goal:** Conversation & Message models, settings page, NLP routes wired, compose page stub.
-
-### 🟣 Vivek
-
-- [ ] Review and merge Day 3 PRs into `dev`.
-- [ ] Create `templates/settings.html` shell: Gmail section ("Connect Gmail" button placeholder), Telegram token input form, service status display.
-- [ ] Add `/settings` GET route (auth‑guarded) in `auth_routes.py` that renders `settings.html`.
-- [ ] Triage any open bugs from Day 3 stand‑up.
-
-### 🔵 Urmila
-
-- [ ] Wire email route stubs (e.g., in `src/web/email_routes.py` or inside `auth_routes.py`):
-  - `/email/send` (POST) → `{"status": "queued"}`
-  - `/email/list` (GET) → `{"emails": []}`
-  - `/email/read/<id>` (GET) → `{"error": "not implemented"}`, HTTP 501
-- [ ] Write unit tests for all three stubs (auth guard, response shape).
-
-### 🟢 Tummala (Backend Dev 2)
-
-- [ ] Add `Conversation` model: `id`, `user_id` (FK), `telegram_chat_id` (unique), `state`, `context`, `created_at`, `updated_at`.
-- [ ] Add `Message` model: `id`, `conversation_id` (FK), `sender` (user/bot), `text`, `created_at`.
-- [ ] Confirm all 5 tables exist in `data.db`: `users`, `user_tokens`, `email_messages`, `conversations`, `messages`.
-
-### 🟠 Penke
-
-- [ ] Build `templates/compose.html` stub: service selector (Gmail/Telegram), recipient field, subject field (hide for Telegram), message textarea, Send button (non‑functional).
-- [ ] Add voice dictation section: Record button, Stop button, transcription preview area (non‑functional – wired in Sprint 3).
-- [ ] Wire compose page into `base.html` Compose nav link.
-
-### 🟡 Jagadeesh
-
-- [ ] Write tests for email route stubs: `/email/send`, `/email/list`, `/email/read/1` (401 without session, correct stub response with session).
-- [ ] Write test: create a `Conversation` + 2 `Message` records, query `conversation.messages`, assert both returned in correct order.
-- [ ] Run full test suite locally and report coverage % to Vivek.
-
-### 🩷 Tummala (AI/ML)
-
-- [ ] Wire `/nlp/summarize` route in `src/app.py`: accept `{text}` JSON, call `nlp_service.summarize_text()`, return `{"summary": ...}`.
-- [ ] Wire `/nlp/suggest` route similarly: accept `{text}` JSON, return `{"suggestions": [...]}`.
-- [ ] Write unit tests for both NLP routes (mock service functions, test response shape).
-
-### 💜 Saniya / Kiran
-
-- [ ] Add any new packages (bcrypt, openai-whisper, transformers, gTTS, torch) to `requirements.txt`.
-- [ ] Verify CI pipeline installs all dependencies cleanly; mock `whisper` and HuggingFace model load in CI to prevent timeouts.
-- [ ] Add CI step: fail build if coverage drops below 50% (baseline for this sprint).
+```text
+voice-email-assistant/
+├── .env.example              # Schema template for environment variables and model locations
+├── Dockerfile                # Multi-stage optimized Docker deployment specification
+├── PLAN.md                   # Detailed project sprints, ceremony logs, and task assignments
+├── requirements.txt          # Python application dependencies (Flask, PyTorch, Transformers, etc.)
+├── run.py                    # Application launcher / Dev Server entrypoint
+├── package.json              # Developer tools configuration (Prettier styling configs)
+├── pytest.ini                # Pytest framework configurations
+│
+├── docs/                     # Architectural logs & deployment manuals
+│   ├── ARCHITECTURE.md       # Deep-dive backend, service, and database blueprints
+│   ├── DEPLOYMENT.md         # Production guidelines for Railway, Render, and Docker
+│   ├── PROJECT_PROGRESS.md   # Sprint execution logs and velocity tracker
+│   └── SETUP_GUIDE.md        # Beginner quickstart documentation
+│
+├── src/                      # Monolithic Python backend
+│   ├── app.py                # Main Flask factory, blueprint registration, and config hooks
+│   ├── db.py                 # SQLite SQLAlchemy database engine connector
+│   │
+│   ├── models/               # Database tables and entity mappings
+│   │   └── __init__.py       # ORM Schema (Users, Messages, Preferences, OAuth tokens)
+│   │
+│   ├── services/             # Core Business Logic & AI Services
+│   │   ├── __init__.py       # Service module initialization
+│   │   ├── ai_service.py     # Base pipeline loaders for HuggingFace and local PyTorch engines
+│   │   ├── auth.py           # Secure password hashing, login validations, and avatars
+│   │   ├── email_service.py  # Internal inbox filters, message parsers, and dispatch engines
+│   │   ├── nlp_service.py    # AI Vector search matching and search indexes
+│   │   ├── outlook_service.py# REST API wrapper client for Microsoft Outlook
+│   │   ├── preferences.py    # Controller actions for User preference panels
+│   │   ├── qwen_draft_service.py # Qwen-based email/draft template generators
+│   │   ├── qwen_reply_service.py # Intelligent suggested replies generator
+│   │   ├── summary_service.py # Text summary engines using BART/T5 models
+│   │   ├── translation.py    # Multi-lingual translations with mBART-50
+│   │   └── voice.py          # Whisper transcription and gTTS vocal synthesis handlers
+│   │
+│   └── web/                  # API Routers / Web Controllers
+│       ├── __init__.py       # Web module initialization
+│       ├── ai_guard.py       # Middleware handler managing premium AI usage quotas
+│       ├── ai_panel_routes.py# Route handlers for client sidebar AI interactions
+│       ├── auth_routes.py    # Routing for logins, OAuth flow redirects, and registration
+│       ├── compose_routes.py # Compose/Save draft and email dispatch endpoints
+│       ├── email_routes.py   # Inbox list, individual message fetchers, and folder actions
+│       ├── nlp_routes.py     # AI Vector search endpoints
+│       ├── summary_routes.py # Thread summary triggers
+│       ├── translation_routes.py # Translation engine triggers
+│       └── voice_routes.py   # Audio audio upload, transcription, and TTS streams
+│
+├── static/                   # Static browser-facing client resources
+│   ├── css/                  # Curated styling modules
+│   │   ├── ai-panel.css      # Styling for collapsible AI sidebar utilities
+│   │   ├── base.css          # Color tokens, CSS variables, and layout resets
+│   │   ├── compose.css       # Audio Waveforms and email compose workspace styles
+│   │   ├── dashboard.css     # Clean inbox, charts, stats grid, and mail folders
+│   │   ├── error.css         # Minimalist error pages
+│   │   ├── login.css         # Split-panel elegant authentication styles
+│   │   ├── message_view.css  # Interactive thread, summary cards, and audio buttons
+│   │   ├── settings.css      # Profile settings, channels sync panels, and sliders
+│   │   └── style.css         # Global core stylesheets
+│   │
+│   └── js/                   # Frontend SPA JavaScript modules
+│       ├── ai.js             # High-level AI helper functions
+│       ├── ai_panel.js       # AI panel handlers and sidebar layout dynamics
+│       ├── app.js            # Main Single Page App controller and routing setup
+│       ├── compose.js        # Waveform recorder, dictation, and draft controllers
+│       ├── dashboard.js      # Mail categorization, pagination, and AI search routines
+│       ├── message.js        # Individual email interaction layer
+│       ├── message_summary.js # Thread summary triggers and speech vocal controllers
+│       └── settings.js       # Custom theme settings and channel sync selectors
+│
+├── templates/                # Jinja2 HTML core components
+│   ├── ai_panel.html         # Sidebar component interface
+│   ├── base.html             # Main dashboard framework shell
+│   ├── compose.html          # Modular workspace for composing messages
+│   ├── dashboard.html        # Message lists, counts, and quick filter categories
+│   ├── error.html            # Error display layouts
+│   ├── login.html            # User login prompt screen
+│   ├── message_view.html     # Email details reader view
+│   ├── settings.html         # Settings, theme, and profile panels
+│   └── signup.html           # User onboarding form
+│
+└── tests/                    # Robust verification test suites
+    ├── conftest.py           # Pytest configurations and dependency mocks
+    ├── test_ai_panel_js.py   # JavaScript interface tests
+    └── test_auth_phase1.py   # Complete user login and OAuth lifecycle tests
+```
 
 ---
 
-## Day 5 – Friday (Integration, Bug Fixes, Sprint Review)
+## 🛠️ Installation & Local Setup
 
-**Goal:** All code merged, integration bugs fixed, demos prepared, ceremonies held.
+Get your voice email assistant up and running in minutes.
 
-### 🟣 Vivek
+### 📋 Prerequisites
+Ensure you have the following installed on your machine:
+*   **Python:** Version `3.10` or `3.11`
+*   **FFmpeg:** Required for processing recorded audio formats (Whisper processing)
+*   *(Optional)* **Docker Desktop:** For simple, containerized execution
 
-- [ ] Merge all Day 4 PRs into `dev`, resolve conflicts (especially `models.py` and `app.py`).
-- [ ] Fix any P1 integration bugs discovered after full merge.
-- [ ] Write a Dockerfile scaffold (`FROM python:3.11-slim`, copy files, install deps, expose 5000, CMD flask run) – commit for Sprint 5 reference.
-- [ ] Update `docs/SETUP_GUIDE.md` with any new setup steps (ffmpeg, model env vars).
-- [ ] Facilitate Sprint Review (45 min) and Sprint Retrospective (30 min).
+### 🚀 Standard Setup
+1.  **Clone the Repository:**
+    ```bash
+    git clone https://github.com/Vivek20510/voice-email-assistant.git
+    cd voice-email-assistant
+    ```
 
-### 🔵 Urmila
+2.  **Create & Activate a Virtual Environment:**
+    *   **macOS / Linux:**
+        ```bash
+        python3 -m venv venv
+        source venv/bin/activate
+        ```
+    *   **Windows:**
+        ```powershell
+        python -m venv venv
+        .\venv\Scripts\Activate.ps1
+        ```
 
-- [ ] Fix any auth route bugs from integration (session not persisting, redirect loops, missing imports).
-- [ ] Prepare 2‑minute demo: POST `/auth/signup` in browser → user in DB → login → session active → dashboard.
+3.  **Install Required Dependencies:**
+    ```bash
+    pip install --upgrade pip
+    pip install -r requirements.txt
+    ```
 
-### 🟢 Tummala (Backend Dev 2)
+4.  **Configure Environment Variables:**
+    Duplicate the provided template `.env.example` to create a working config:
+    ```bash
+    cp .env.example .env
+    ```
+    *Open the `.env` file and insert your respective credentials (see [Configuration](#-configuration)).*
 
-- [ ] Fix any model FK or table creation bugs from integration.
-- [ ] Prepare 2‑minute demo: show all 5 tables in `sqlite3` CLI or DB browser.
+5.  **Initialize the Database:**
+    Open a Python terminal and run:
+    ```python
+    from src.app import app
+    from src.db import db
+    with app.app_context():
+        db.create_all()
+    ```
 
-### 🟠 Penke
-
-- [ ] Fix any Jinja2 rendering issues (template inheritance errors, broken static file paths).
-- [ ] Prepare 2‑minute demo: login page → signup → redirect to dashboard shell → compose page layout.
-
-### 🟡 Jagadeesh
-
-- [ ] Run full test suite on merged `dev` branch, confirm zero failures.
-- [ ] Prepare Sprint Review test summary: total tests written, pass rate, coverage %.
-- [ ] Fix any failing tests from integration; document known gaps as GitHub issues.
-
-### 🩷 Tummala (AI/ML)
-
-- [ ] Confirm NLP stubs respond correctly after integration: `/nlp/summarize` and `/nlp/suggest` return expected shape.
-- [ ] Prepare 2‑minute demo: call `summarize_text()` in Python REPL on a sample email body.
-
-### 💜 Saniya / Kiran
-
-- [ ] Final CI run on merged `dev` – all tests green, coverage report as artifact.
-- [ ] Confirm Dockerfile builds without errors locally.
-
----
-
-## Sprint Review Agenda (Friday 2:00 PM)
-
-| #   | Demo                                                   | Owner          | Time  |
-| --- | ------------------------------------------------------ | -------------- | ----- |
-| 1   | Sprint goal recap                                      | Vivek          | 2 min |
-| 2   | Signup → Login → Dashboard redirect                    | Urmila         | 2 min |
-| 3   | All 5 DB tables exist, FK relationships                | Tummala        | 2 min |
-| 4   | login.html, signup.html, dashboard shell, compose stub | Penke          | 2 min |
-| 5   | Test suite results, coverage %                         | Jagadeesh      | 2 min |
-| 6   | `summarize_text()` in REPL                             | Tummala        | 2 min |
-| 7   | CI pipeline green                                      | Saniya / Kiran | 2 min |
-| 8   | Q&A + feedback                                         | All            | 5 min |
-
----
-
-## Sprint Retrospective Agenda (Friday 3:00 PM)
-
-Each member answers:
-
-1. What went well?
-2. What slowed us down?
-3. One thing to do differently in Sprint 2?
-
-Action items → feed into Sprint 2 Planning.
+6.  **Launch the Application:**
+    ```bash
+    python run.py
+    ```
+    *Navigate to `http://127.0.0.1:5000` in your web browser.*
 
 ---
 
-## Definition of Done (DoD)
+## 🐳 Docker Deployment
 
-- [ ] Code pushed to `feature/*` branch, PR raised against `dev`.
-- [ ] PR reviewed by at least one other member.
-- [ ] New code has at least one corresponding test.
-- [ ] All existing tests pass before PR merge.
-- [ ] CI pipeline stays green after merge.
-- [ ] No hardcoded secrets or API keys.
-- [ ] No `print()` debug statements – use `logging`.
+The application features a fully optimized Docker environment suitable for fast deployments.
 
----
+1.  **Build the Container:**
+    ```bash
+    docker build -t voice-email-assistant .
+    ```
 
-## Sprint 1 Acceptance Criteria
-
-- [ ] `flask run` works on fresh clone + `.env` setup.
-- [ ] `GET /health` → `200 {"status":"ok"}`.
-- [ ] `POST /auth/signup` creates user and sets session.
-- [ ] `POST /auth/login` authenticates and sets session.
-- [ ] `GET /auth/logout` clears session.
-- [ ] `GET /auth/status` returns 401 (unauthenticated) or user info (200).
-- [ ] `GET /dashboard` redirects to login when no session.
-- [ ] All 5 tables exist after `init_db()`.
-- [ ] `nlp_service.summarize_text()` and `suggest_replies()` return stub output.
-- [ ] `voice.transcribe_audio()` returns dict with `text`, `language`, `segments`.
-- [ ] All tests pass in GitHub Actions CI.
-- [ ] Coverage baseline ≥50% established.
+2.  **Run the Container:**
+    ```bash
+    docker run -p 5000:5000 --env-file .env voice-email-assistant
+    ```
+    *Access the application at `http://localhost:5000`.*
 
 ---
 
-## Known Risks & Mitigations
+## ⚙️ Configuration (.env Reference)
 
-| Risk                             | Mitigation                                        |
-| -------------------------------- | ------------------------------------------------- |
-| Vivek overloaded                 | Dev tasks on Day 1 and Day 5 kept minimal         |
-| Tummala overloaded (BE2 + AI/ML) | AI/ML tasks are stubs only in Sprint 1            |
-| `models.py` merge conflicts      | Tummala owns `models.py`; Urmila only imports     |
-| Whisper/torch slow CI install    | Mock model load in CI tests via `@patch`          |
-| Jagadeesh context‑switching      | Testing tasks focus only on routes built that day |
-| Saniya/Kiran coordination        | One person owns CI file; other reviews            |
-
----
-
-## Tech Debt to Carry Into Sprint 2
-
-- OAuth placeholders in login.html – Sprint 2
-- Email route stubs – Sprint 2
-- No rate limiting – Sprint 4
-- No Alembic migrations – fix before production
-- `summarize_text()` and `suggest_replies()` stubs – real implementation Sprint 2
+| Key | Description | Default Value |
+| :--- | :--- | :--- |
+| `FLASK_SECRET_KEY` | Secure session hashing key | `replace-with-a-secure-secret` |
+| `DATABASE_URL` | SQLite / PostgreSQL connection URI | `sqlite:///data.db` |
+| `GOOGLE_CLIENT_ID` | Google OAuth Client ID credentials | *(Get from Google Console)* |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth Secret key credentials | *(Get from Google Console)* |
+| `GOOGLE_LOGIN_REDIRECT_URI` | Auth redirect callback path | `http://127.0.0.1:5000/auth/callback` |
+| `GOOGLE_GMAIL_REDIRECT_URI`| Gmail sync redirect callback path | `http://127.0.0.1:5000/auth/gmail/callback` |
+| `HF_TOKEN` | HuggingFace Access Token | *(Required for HF pipeline downloads)* |
+| `WHISPER_MODEL_SIZE` | OpenAI Whisper local model download size | `tiny.en` |
+| `HF_WHISPER_MODEL` | HuggingFace Whisper model path | `openai/whisper-small` |
+| `HF_MODEL_NAME` | Instruction drafting LLM | `Qwen/Qwen2.5-1.5B-Instruct` |
+| `TRANSLATION_HF_MODEL` | HuggingFaceTranslation model path | `facebook/mbart-large-50-many-to-many-mmt`|
 
 ---
 
-## File Deliverables – Sprint 1 Exit
+## 🧪 Verification & Testing
+
+Our codebase contains comprehensive unit and integration tests.
+
+### Running Test Suite
+Execute the testing suite with:
+```bash
+pytest
+```
+
+### Viewing Code Coverage
+Run pytest with coverage report to evaluate covered lines:
+```bash
+pytest --cov=src --cov-report=term-missing
+```
+
+---
+
+## 🤝 Contribution Guidelines
+
+We welcome contributions to the **Voice-Based Email & Messaging Assistant**!
+1.  **Branching Strategy:** Cut features from `dev` using `feature/your-feature-name` naming schemas.
+2.  **Code Styling:** Run Prettier on HTML/CSS/JS configurations and keep Python files PEP8 compliant.
+3.  **Pull Requests:** Target `dev` for initial merges. Ensure your pipeline builds green and is supported by corresponding unit tests.
+
+---
+
+## 📄 License
+This project is licensed under the [MIT License](LICENSE) — see the root license file for usage specifications.
