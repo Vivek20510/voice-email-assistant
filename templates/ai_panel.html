@@ -17,6 +17,7 @@
         type="button"
         onclick="clearAiConversation()"
         title="Clear conversation"
+        aria-label="Clear conversation"
       >
         Clear
       </button>
@@ -37,11 +38,23 @@
       />
 
       <button
+        class="ai-header-btn"
+        id="ai-ask-btn"
+        type="button"
+        onclick="askAiWithVoice()"
+        title="Ask with voice"
+        aria-label="Ask with voice"
+      >
+        🎤 Ask
+      </button>
+
+      <button
         class="ai-send-btn"
         id="ai-send-btn"
         type="button"
         onclick="sendAiQuery()"
-        title="Send"
+        title="Send message"
+        aria-label="Send message"
       >
         ↑
       </button>
@@ -50,38 +63,40 @@
     <!-- ✅ Quick Suggestions -->
 
     <div class="ai-chips">
-      <div
+      <button
         class="ai-chip"
+        type="button"
         onclick="prefillAi('How do I connect Gmail?')"
       >
         How do I connect Gmail?
-      </div>
+      </button>
 
-      <div
-        class="ai-chip"
-        onclick="prefillAi('Open compose')"
-      >
+      <button class="ai-chip" type="button" onclick="prefillAi('Open compose')">
         Open compose
-      </div>
+      </button>
 
-      <div
-        class="ai-chip"
-        onclick="prefillAi('Show unread')"
-      >
+      <button class="ai-chip" type="button" onclick="prefillAi('Show unread')">
         Show unread
-      </div>
+      </button>
 
-      <div
+      <button
         class="ai-chip"
+        type="button"
         onclick="prefillAi('Summarize today')"
       >
         Summarize today
-      </div>
+      </button>
     </div>
 
     <!-- ✅ Results Area -->
 
-    <div class="ai-results-area" id="ai-results">
+    <div
+      class="ai-results-area"
+      id="ai-results"
+      role="log"
+      aria-live="polite"
+      aria-busy="false"
+    >
       <div class="ai-placeholder">Ask about the app or your inbox.</div>
 
       <div class="ai-empty" id="ai-empty">

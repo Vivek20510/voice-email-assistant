@@ -1,6 +1,9 @@
 const AIPanel = (() => {
   const history = [];
   let isLoading = false;
+  let canStopGeneration = false;
+  let activeAIRequest = null;
+  let nextRequestId = 0;
   let lastSubmittedQuery = "";
   let latestAssistantTurn = null;
 
@@ -8,6 +11,7 @@ const AIPanel = (() => {
   const resultsEl = () => document.getElementById("ai-results");
   const sendBtnEl = () => document.getElementById("ai-send-btn");
   const clearBtnEl = () => document.getElementById("ai-clear-btn");
+  const askBtnEl = () => document.getElementById("ai-ask-btn");
 
   function emptyStateMarkup() {
     return `
@@ -65,20 +69,42 @@ const AIPanel = (() => {
     }
   }
 
-  function setLoadingState(nextLoading) {
+  function setLoadingState(nextLoading, options = {}) {
     isLoading = nextLoading;
+    canStopGeneration = nextLoading && options.canStopGeneration === true;
     const sendButton = sendBtnEl();
     const input = inputEl();
     const clearButton = clearBtnEl();
+    const askButton = askBtnEl();
+    const results = resultsEl();
 
-    if (sendButton) sendButton.disabled = nextLoading;
+    if (sendButton) {
+      sendButton.disabled = nextLoading && !canStopGeneration;
+      sendButton.classList?.toggle("ai-stop-btn", canStopGeneration);
+      sendButton.textContent = canStopGeneration ? "■" : "↑";
+      sendButton.title = canStopGeneration ? "Stop generating" : "Send message";
+      sendButton.setAttribute?.(
+        "aria-label",
+        canStopGeneration ? "Stop generating" : "Send message",
+      );
+    }
     if (input) input.disabled = nextLoading;
     if (clearButton) clearButton.disabled = nextLoading;
+    if (askButton) askButton.disabled = nextLoading;
+    results?.setAttribute?.("aria-busy", String(nextLoading));
 
-    if (typeof resultsEl().querySelectorAll === "function") {
-      resultsEl().querySelectorAll(".ai-regenerate-btn").forEach((button) => {
+    if (typeof document.querySelectorAll === "function") {
+      document.querySelectorAll(".ai-chip").forEach((button) => {
         button.disabled = nextLoading;
       });
+    }
+
+    if (typeof resultsEl().querySelectorAll === "function") {
+      resultsEl()
+        .querySelectorAll(".ai-regenerate-btn")
+        .forEach((button) => {
+          button.disabled = nextLoading;
+        });
     }
   }
 
@@ -111,6 +137,14 @@ const AIPanel = (() => {
     appendTurn("assistant", `<div class="ai-error">${escapeHtml(msg)}</div>`);
   }
 
+  function showStopped() {
+    clearLoading();
+    appendTurn(
+      "assistant",
+      `<div class="ai-stopped" role="status">Response stopped.</div>`,
+    );
+  }
+
   function trimLatestHistoryPair(query) {
     const assistantTurn = history[history.length - 1];
     const userTurn = history[history.length - 2];
@@ -124,19 +158,42 @@ const AIPanel = (() => {
     }
   }
 
-  async function waitForEmails() {
+  function abortError() {
+    const error = new Error("Request aborted");
+    error.name = "AbortError";
+    return error;
+  }
+
+  function wait(ms, signal) {
+    if (signal?.aborted) return Promise.reject(abortError());
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(resolve, ms);
+      signal?.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timeoutId);
+          reject(abortError());
+        },
+        { once: true },
+      );
+    });
+  }
+
+  async function waitForEmails(signal) {
     let retries = 10;
     while (
       (!window.currentEmails || window.currentEmails.length === 0) &&
       retries > 0
     ) {
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await wait(300, signal);
       retries--;
     }
   }
 
   function canSkipEmailWait(query) {
-    const q = String(query || "").toLowerCase().trim();
+    const q = String(query || "")
+      .toLowerCase()
+      .trim();
     if (/^(hello|hi|hey)(\s+(ai|assistant))?[.!?]*$/.test(q)) return true;
     return [
       "how do",
@@ -169,10 +226,11 @@ const AIPanel = (() => {
     };
   }
 
-  async function fetchAI(query) {
+  async function fetchAI(query, signal) {
     if (!canSkipEmailWait(query)) {
-      await waitForEmails();
+      await waitForEmails(signal);
     }
+    if (signal?.aborted) throw abortError();
     const dashboardContext = activeDashboardContext();
 
     const response = await fetch("/api/ai-panel/query", {
@@ -185,6 +243,7 @@ const AIPanel = (() => {
         active_view: dashboardContext.active_view,
         active_message_id: dashboardContext.active_message_id,
       }),
+      signal,
     });
 
     let data = {};
@@ -317,11 +376,13 @@ const AIPanel = (() => {
 
   function refreshRegenerateButtons() {
     if (typeof resultsEl().querySelectorAll !== "function") return;
-    resultsEl().querySelectorAll(".ai-regenerate-btn").forEach((button) => {
-      const turn = button.closest(".ai-turn");
-      button.hidden = turn !== latestAssistantTurn;
-      button.disabled = isLoading || turn !== latestAssistantTurn;
-    });
+    resultsEl()
+      .querySelectorAll(".ai-regenerate-btn")
+      .forEach((button) => {
+        const turn = button.closest(".ai-turn");
+        button.hidden = turn !== latestAssistantTurn;
+        button.disabled = isLoading || turn !== latestAssistantTurn;
+      });
   }
 
   async function copyText(text) {
@@ -372,12 +433,19 @@ const AIPanel = (() => {
 
   async function submitQuery(query, options = {}) {
     if (isLoading || !query) return;
+    const requestState = {
+      controller: new AbortController(),
+      id: ++nextRequestId,
+      stopped: false,
+    };
+    activeAIRequest = requestState;
     setStarted();
-    setLoadingState(true);
+    setLoadingState(true, { canStopGeneration: true });
     showLoading();
 
     try {
-      const data = await fetchAI(query);
+      const data = await fetchAI(query, requestState.controller.signal);
+      if (activeAIRequest !== requestState || requestState.stopped) return;
       if (!data || data.success === false) {
         showError(data?.error || "No response from server");
         return;
@@ -392,13 +460,42 @@ const AIPanel = (() => {
         data.actions.forEach((action) => executeAction(action));
       }
     } catch (err) {
+      if (err?.name === "AbortError") {
+        if (activeAIRequest === requestState && !requestState.stopped) {
+          showStopped();
+        }
+        return;
+      }
+      if (activeAIRequest !== requestState || requestState.stopped) return;
       showError(err.message || "Server error");
     } finally {
-      setLoadingState(false);
-      if (!options.keepInputDisabled) {
-        inputEl()?.focus();
+      if (activeAIRequest === requestState) {
+        activeAIRequest = null;
+        setLoadingState(false);
+        if (!options.keepInputDisabled) {
+          inputEl()?.focus();
+        }
       }
     }
+  }
+
+  function stopGeneration() {
+    const requestState = activeAIRequest;
+    if (!requestState || !canStopGeneration) return;
+    requestState.stopped = true;
+    activeAIRequest = null;
+    requestState.controller.abort();
+    showStopped();
+    setLoadingState(false);
+    inputEl()?.focus();
+  }
+
+  function handlePrimaryAction() {
+    if (canStopGeneration) {
+      stopGeneration();
+      return;
+    }
+    sendQuery();
   }
 
   async function sendQuery() {
@@ -448,8 +545,221 @@ const AIPanel = (() => {
   }
 
   function prefill(text) {
+    if (isLoading) return;
     inputEl().value = text;
     inputEl().focus();
+  }
+
+  // ------------------------------------------------
+  // VOICE: record → transcribe → submit
+  // ------------------------------------------------
+
+  let _mediaRecorder = null;
+  let _speechRecognition = null;
+  let _audioChunks = [];
+  let _isRecording = false;
+  const RECORD_MAX_MS = 10000;
+
+  function _setAskBtnLabel(recording) {
+    const btn = document.getElementById("ai-ask-btn");
+    if (!btn) return;
+    btn.textContent = recording ? "⏹ Stop" : "🎤 Ask";
+    btn.title = recording ? "Stop recording" : "Ask with voice";
+    btn.setAttribute?.(
+      "aria-label",
+      recording ? "Stop recording" : "Ask with voice",
+    );
+    // reuse existing hover style — just swap background inline while recording
+    btn.style.background = recording ? "#fee2e2" : "";
+    btn.style.borderColor = recording ? "#ef4444" : "";
+    btn.style.color = recording ? "#dc2626" : "";
+  }
+
+  function _showVoiceStatus(msg) {
+    setStarted();
+    appendTurn(
+      "assistant",
+      `<div class="ai-error" style="background:#f0f9ff;border-color:#bae6fd;color:#0369a1;">${escapeHtml(msg)}</div>`,
+    );
+  }
+
+  async function askWithVoice() {
+    // Toggle stop if already recording
+    if (_isRecording) {
+      if (_speechRecognition) {
+        _speechRecognition.stop();
+      } else {
+        _mediaRecorder?.stop();
+      }
+      return;
+    }
+
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      _askWithBrowserSpeech(SpeechRecognition);
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      _showVoiceStatus(
+        "Your browser does not support microphone access. Please type your query.",
+      );
+      return;
+    }
+
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      _showVoiceStatus(
+        "Microphone access denied. Please allow microphone permissions and try again.",
+      );
+      return;
+    }
+
+    _audioChunks = [];
+    _isRecording = true;
+    _setAskBtnLabel(true);
+    _showVoiceStatus("🎤 Recording… click Stop or wait 10 seconds.");
+
+    const mimeType = MediaRecorder.isTypeSupported("audio/webm")
+      ? "audio/webm"
+      : "";
+
+    _mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+
+    _mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) _audioChunks.push(e.data);
+    };
+
+    _mediaRecorder.onstop = async () => {
+      _isRecording = false;
+      _setAskBtnLabel(false);
+      stream.getTracks().forEach((t) => t.stop());
+
+      const blob = new Blob(_audioChunks, {
+        type: mimeType || "audio/webm",
+      });
+      await _uploadAndTranscribe(blob);
+    };
+
+    const autoStop = setTimeout(() => {
+      if (_isRecording) _mediaRecorder.stop();
+    }, RECORD_MAX_MS);
+
+    _mediaRecorder.addEventListener("stop", () => clearTimeout(autoStop), {
+      once: true,
+    });
+
+    _mediaRecorder.start();
+  }
+
+  function _askWithBrowserSpeech(SpeechRecognition) {
+    const recognition = new SpeechRecognition();
+    _speechRecognition = recognition;
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.continuous = false;
+
+    recognition.onstart = () => {
+      _isRecording = true;
+      _setAskBtnLabel(true);
+      _showVoiceStatus("Listening... click Stop when you finish.");
+    };
+
+    recognition.onresult = async (event) => {
+      const transcript = Array.from(event.results)
+        .map((result) => result[0]?.transcript || "")
+        .join(" ")
+        .trim();
+      await _submitTranscript(transcript);
+    };
+
+    recognition.onerror = (event) => {
+      const denied =
+        event.error === "not-allowed" || event.error === "service-not-allowed";
+      _showVoiceStatus(
+        denied
+          ? "Microphone access denied. Please allow microphone permissions and try again."
+          : "Could not hear anything. Please try again or type your query.",
+      );
+    };
+
+    recognition.onend = () => {
+      _speechRecognition = null;
+      _isRecording = false;
+      _setAskBtnLabel(false);
+    };
+
+    try {
+      recognition.start();
+    } catch (err) {
+      _speechRecognition = null;
+      _isRecording = false;
+      _setAskBtnLabel(false);
+      _showVoiceStatus("Voice recognition could not start. Please try again.");
+    }
+  }
+
+  async function _submitTranscript(transcript) {
+    if (!transcript) {
+      _showVoiceStatus(
+        "Could not hear anything. Please try again or type your query.",
+      );
+      setLoadingState(false);
+      return;
+    }
+
+    setStarted();
+    appendTurn(
+      "user",
+      `<div class="ai-user-bubble">${escapeHtml(transcript)}</div>`,
+    );
+
+    const input = inputEl();
+    if (input) input.value = "";
+
+    setLoadingState(false);
+    await submitQuery(transcript);
+  }
+
+  async function _uploadAndTranscribe(blob) {
+    setLoadingState(true);
+
+    // Remove voice status messages
+    resultsEl()
+      ?.querySelectorAll(".ai-turn")
+      .forEach((turn) => {
+        if (turn.querySelector("[style*='#0369a1']")) turn.remove();
+      });
+
+    try {
+      const form = new FormData();
+      form.append("audio", blob, "recording.webm");
+
+      const resp = await fetch("/api/voice/transcribe", {
+        method: "POST",
+        body: form,
+      });
+
+      const data = await resp.json();
+
+      if (!resp.ok || !data.success) {
+        _showVoiceStatus(
+          data.error || "Transcription failed. Please type your query.",
+        );
+        setLoadingState(false);
+        return;
+      }
+
+      await _submitTranscript((data.transcript || "").trim());
+    } catch (err) {
+      _showVoiceStatus(
+        "Network error during transcription. Please type your query.",
+      );
+      setLoadingState(false);
+    }
   }
 
   return {
@@ -458,6 +768,9 @@ const AIPanel = (() => {
     prefill,
     clearConversation,
     regenerateLastAnswer,
+    askWithVoice,
+    handlePrimaryAction,
+    stopGeneration,
     history,
   };
 })();
@@ -467,7 +780,7 @@ if (typeof window !== "undefined") {
 }
 
 function sendAiQuery() {
-  AIPanel.sendQuery();
+  AIPanel.handlePrimaryAction();
 }
 
 function handleAiKey(event) {
@@ -480,4 +793,8 @@ function prefillAi(text) {
 
 function clearAiConversation() {
   AIPanel.clearConversation();
+}
+
+function askAiWithVoice() {
+  AIPanel.askWithVoice();
 }

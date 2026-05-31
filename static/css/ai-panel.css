@@ -91,9 +91,18 @@
   background: #374151;
 }
 
+.ai-send-btn.ai-stop-btn {
+  background: #dc2626;
+}
+
+.ai-send-btn.ai-stop-btn:hover {
+  background: #b91c1c;
+}
+
 .ai-send-btn:disabled,
 .ai-header-btn:disabled,
-.ai-tool-btn:disabled {
+.ai-tool-btn:disabled,
+.ai-chip:disabled {
   cursor: not-allowed;
   opacity: 0.48;
 }
@@ -132,6 +141,8 @@
 }
 
 .ai-chip {
+  font-family: inherit;
+
   padding: 6px 10px;
 
   background: #f9fafb;
@@ -147,10 +158,21 @@
   cursor: pointer;
 }
 
-.ai-chip:hover {
+.ai-chip:hover:not(:disabled) {
   background: #111827;
   border-color: #111827;
   color: #fff;
+}
+
+.ai-send-btn:focus-visible,
+.ai-header-btn:focus-visible,
+.ai-tool-btn:focus-visible,
+.ai-chip:focus-visible,
+.ai-action-btn:focus-visible,
+.ai-card:focus-visible,
+.ai-search-input:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
 }
 
 .ai-results-area {
@@ -211,7 +233,8 @@
 .ai-user-bubble,
 .ai-response,
 .ai-loading,
-.ai-error {
+.ai-error,
+.ai-stopped {
   border-radius: 8px;
   padding: 10px 12px;
   font-size: 13px;
@@ -296,6 +319,12 @@
   background: #fff1f2;
   color: #9f1239;
   border: 1px solid #fecdd3;
+}
+
+.ai-stopped {
+  background: #f9fafb;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
 }
 
 .ai-card-list {

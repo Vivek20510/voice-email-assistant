@@ -1,46 +1,82 @@
-import builtins
 import sys
 
-
-def test_transcribe_audio_uses_whisper_model(monkeypatch):
-    class DummyModel:
-        def transcribe(self, file_path, language=None):
-            return {
-                "text": "hello world",
-                "language": language or "en",
-                "segments": [{"id": 0, "text": "hello world"}],
-            }
-
-    class DummyWhisper:
-        @staticmethod
-        def load_model(name):
-            assert name == "tiny"
-            return DummyModel()
-
-    monkeypatch.setitem(sys.modules, "whisper", DummyWhisper)
-
-    from src.services.voice import transcribe_audio
-
-    result = transcribe_audio("dummy.wav", language="en")
-    assert result["text"] == "hello world"
-    assert result["language"] == "en"
-    assert isinstance(result["segments"], list)
-    assert result["segments"][0]["text"] == "hello world"
+from src.services import voice
 
 
-def test_transcribe_audio_placeholder_when_whisper_missing(monkeypatch):
-    original_import = builtins.__import__
+def _reset_stt_globals(monkeypatch):
+    monkeypatch.setattr(voice, "_local_attempted", False)
+    monkeypatch.setattr(voice, "_hf_attempted", False)
+    monkeypatch.setattr(voice, "_whisper_model", None)
+    monkeypatch.setattr(voice, "_hf_client", None)
+    monkeypatch.setattr(voice, "_convert_to_wav", lambda _path: None)
 
-    def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
-        if name == "whisper":
-            raise ImportError("No module named whisper")
-        return original_import(name, globals, locals, fromlist, level)
 
-    monkeypatch.setattr(builtins, "__import__", fake_import)
+def test_transcribe_audio_uses_local_whisper(monkeypatch):
+    _reset_stt_globals(monkeypatch)
+    monkeypatch.setattr(voice, "_load_local_whisper", lambda: True)
+    monkeypatch.setattr(
+        voice,
+        "_transcribe_local",
+        lambda _path: ("hello world", 0.05),
+    )
 
-    from src.services.voice import transcribe_audio
+    result = voice.transcribe_audio("dummy.wav", language="en")
 
-    result = transcribe_audio("dummy.wav", language="fr")
-    assert "placeholder" in result["text"].lower()
+    assert result == {
+        "success": True,
+        "text": "hello world",
+        "language": "en",
+        "segments": [],
+        "source": "local",
+        "error": None,
+    }
+
+
+def test_transcribe_audio_uses_hf_when_local_whisper_is_unavailable(monkeypatch):
+    _reset_stt_globals(monkeypatch)
+    monkeypatch.setattr(voice, "_load_local_whisper", lambda: False)
+    monkeypatch.setattr(voice, "_load_hf_api", lambda: True)
+    monkeypatch.setattr(voice, "_transcribe_hf", lambda _path: "schedule a meeting")
+
+    result = voice.transcribe_audio("dummy.webm")
+
+    assert result["success"] is True
+    assert result["text"] == "schedule a meeting"
+    assert result["source"] == "hf_api"
+
+
+def test_transcribe_audio_reports_unavailable_when_all_layers_fail(monkeypatch):
+    _reset_stt_globals(monkeypatch)
+    monkeypatch.setattr(voice, "_load_local_whisper", lambda: False)
+    monkeypatch.setattr(voice, "_load_hf_api", lambda: False)
+
+    result = voice.transcribe_audio("dummy.webm", language="fr")
+
+    assert result["success"] is False
+    assert result["text"] == ""
     assert result["language"] == "fr"
-    assert result["segments"] == []
+    assert result["source"] == "error"
+    assert "currently unavailable" in result["error"]
+
+
+def test_transcribe_audio_rejects_silence(monkeypatch):
+    _reset_stt_globals(monkeypatch)
+    monkeypatch.setattr(voice, "_load_local_whisper", lambda: True)
+    monkeypatch.setattr(voice, "_transcribe_local", lambda _path: ("", 0.95))
+
+    result = voice.transcribe_audio("dummy.wav")
+
+    assert result["success"] is False
+    assert result["error"].startswith("No speech detected.")
+
+
+def test_ffmpeg_executable_uses_bundled_fallback(monkeypatch):
+    class DummyImageioFfmpeg:
+        @staticmethod
+        def get_ffmpeg_exe():
+            return "bundled-ffmpeg.exe"
+
+    monkeypatch.setattr(voice.shutil, "which", lambda _name: None)
+    monkeypatch.setitem(sys.modules, "imageio_ffmpeg", DummyImageioFfmpeg)
+
+    assert voice._ffmpeg_executable() == "bundled-ffmpeg.exe"

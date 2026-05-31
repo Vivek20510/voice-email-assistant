@@ -12,8 +12,13 @@
 
   function signatureFor(el) {
     const data = el.dataset || {};
+    let preferredLanguage = "English";
+    try {
+      preferredLanguage = localStorage.getItem("preferred_language") || "English";
+    } catch {}
     return JSON.stringify({
       url: data.summaryUrl || "/nlp/summarize",
+      preferredLanguage,
       subject: clean(data.subject),
       sender: clean(data.sender),
       body: clean(data.body),

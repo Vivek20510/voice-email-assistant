@@ -20,6 +20,7 @@ from src.web.nlp_routes import nlp_bp
 from src.web.summary_routes import summary_bp
 
 from src.web.translation_routes import translation_bp  # ✅ added
+from src.web.voice_routes import voice_bp #urmila
 
 # ✅ Load environment variables
 
@@ -84,7 +85,9 @@ def create_app(test_config=None):
 
     app.register_blueprint(summary_bp)
 
-    app.register_blueprint(translation_bp)  # ✅ newly added
+    app.register_blueprint(translation_bp)  # ✅ newly
+    
+    app.register_blueprint(voice_bp)#urmila added
 
     # ✅ Routes
 

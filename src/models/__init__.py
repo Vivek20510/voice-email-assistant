@@ -68,6 +68,7 @@ class UserPreference(db.Model):
         nullable=False,
     )
     ai_data_usage_enabled = db.Column(db.Boolean, nullable=False, default=True)
+    preferred_language = db.Column(db.String(64), nullable=False, default="English")
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(
         db.DateTime,
@@ -80,7 +81,8 @@ class UserPreference(db.Model):
     def __repr__(self):
         return (
             f"<UserPreference user_id={self.user_id} "
-            f"ai_data_usage_enabled={self.ai_data_usage_enabled}>"
+            f"ai_data_usage_enabled={self.ai_data_usage_enabled} "
+            f"preferred_language={self.preferred_language}>"
         )
 
 

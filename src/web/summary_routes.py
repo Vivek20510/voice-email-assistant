@@ -1,7 +1,9 @@
 from flask import Blueprint, jsonify, request
 
 from src.services.summary_service import SummarizerEngine
+from src.services.translation import translate_text
 from src.web.ai_guard import require_ai_data_usage_enabled
+from src.web.translation_routes import selected_language
 
 summary_bp = Blueprint("summary", __name__, url_prefix="/ai")
 
@@ -62,6 +64,7 @@ def summarize():
 
     try:
         summary = engine.generate_summary(text)
+        summary = translate_text(summary, selected_language())
         return jsonify(
             {
                 "success": True,

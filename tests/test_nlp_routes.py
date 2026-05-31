@@ -40,6 +40,24 @@ def test_summarize_route_accepts_email_fields(client, monkeypatch):
     }
 
 
+def test_summarize_route_translates_to_selected_language(client, monkeypatch):
+    captured = {}
+    monkeypatch.setattr("src.web.nlp_routes.summarize_text", lambda *args, **kwargs: "Summary")
+    monkeypatch.setattr("src.web.nlp_routes.selected_language", lambda: "Hindi")
+
+    def fake_translate(text, language):
+        captured.update({"text": text, "language": language})
+        return "सारांश"
+
+    monkeypatch.setattr("src.web.nlp_routes.translate_text", fake_translate)
+
+    response = client.post("/nlp/summarize", json={"text": "A useful email body."})
+
+    assert response.status_code == 200
+    assert response.json["summary"] == "सारांश"
+    assert captured == {"text": "Summary", "language": "Hindi"}
+
+
 def test_suggest_route_returns_suggestions(client):
     response = client.post(
         "/nlp/suggest", json={"text": "Please help with scheduling."}

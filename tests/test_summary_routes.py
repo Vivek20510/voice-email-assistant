@@ -31,6 +31,25 @@ def test_ai_summary_route_returns_summary(client, monkeypatch):
     assert fake_engine.captured_text.startswith("Alice shared")
 
 
+def test_ai_summary_route_translates_to_selected_language(client, monkeypatch):
+    fake_engine = FakeSummaryEngine()
+    captured = {}
+    monkeypatch.setattr("src.web.summary_routes.engine", fake_engine)
+    monkeypatch.setattr("src.web.summary_routes.selected_language", lambda: "Hindi")
+
+    def fake_translate(text, language):
+        captured.update({"text": text, "language": language})
+        return "संक्षिप्त सारांश।"
+
+    monkeypatch.setattr("src.web.summary_routes.translate_text", fake_translate)
+
+    response = client.post("/ai/summary", json={"text": "A sufficiently long email."})
+
+    assert response.status_code == 200
+    assert response.json["summary"] == "संक्षिप्त सारांश।"
+    assert captured == {"text": "A concise summary.", "language": "Hindi"}
+
+
 def test_ai_summary_route_accepts_email_fields(client, monkeypatch):
     fake_engine = FakeSummaryEngine()
     monkeypatch.setattr("src.web.summary_routes.engine", fake_engine)

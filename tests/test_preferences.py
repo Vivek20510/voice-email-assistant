@@ -7,6 +7,8 @@ from src.services.preferences import (
     get_user_preference,
     is_ai_data_usage_enabled,
     set_ai_data_usage_enabled,
+    get_preferred_language,
+    set_preferred_language,
 )
 
 
@@ -35,6 +37,20 @@ def test_ai_data_usage_preference_can_be_disabled(app):
         assert is_ai_data_usage_enabled(user.id) is False
 
 
+def test_preferred_language_can_be_persisted(app):
+    with app.app_context():
+        user = User(email="language@example.com", password_hash=hash_password("Pass123!"))
+        db.session.add(user)
+        db.session.commit()
+
+        assert get_preferred_language(user.id) == "English"
+
+        preference = set_preferred_language(user.id, "Hindi")
+
+        assert preference.preferred_language == "Hindi"
+        assert get_preferred_language(user.id) == "Hindi"
+
+
 def test_schema_compatibility_has_user_preferences_table(app):
     with app.app_context():
         inspector = inspect(db.engine)
@@ -46,3 +62,4 @@ def test_schema_compatibility_has_user_preferences_table(app):
         assert UserPreference.__tablename__ in inspector.get_table_names()
         assert "user_id" in columns
         assert "ai_data_usage_enabled" in columns
+        assert "preferred_language" in columns

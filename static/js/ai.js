@@ -40,26 +40,7 @@ async function generateSummary() {
      return;
    }
 
-   const aiSummaryText = data.summary || "No summary returned.";
-
-   // Translate if needed
-   summaryEl.textContent = "Translating...";
-   const lang = localStorage.getItem("preferred_language") || "English";
-
-   const translateRes = await fetch("/api/translate", {
-     method: "POST",
-     headers: { "Content-Type": "application/json" },
-     body: JSON.stringify({ text: aiSummaryText, language: lang }),
-   });
-
-   const translatedData = await translateRes.json();
-
-   if (!translateRes.ok) {
-     summaryEl.textContent = aiSummaryText; // fallback to untranslated
-     return;
-   }
-
-   summaryEl.textContent = translatedData.translated_text || aiSummaryText;
+   summaryEl.textContent = data.summary || "No summary returned.";
  } catch {
    summaryEl.textContent = "Network error while generating summary.";
  } finally {

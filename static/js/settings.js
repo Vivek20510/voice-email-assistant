@@ -28,18 +28,27 @@ function showToast(message, type = "success") {
 // ── Language Preference ───────────────────────────────────────────────────────
 function restoreSavedLanguage() {
   const savedLang = localStorage.getItem("preferred_language");
-  if (!savedLang) return;
+  if (savedLang) applySavedLanguage(savedLang);
 
-  // Settings page select (id="language-select")
-  const selectA = document.getElementById("language-select");
-  if (selectA) selectA.value = savedLang;
-
-  // Dashboard settings select (id="languageSelect")
-  const selectB = document.getElementById("languageSelect");
-  if (selectB) selectB.value = savedLang;
+  fetch("/api/language-preference")
+    .then((response) => response.json())
+    .then((data) => {
+      if (!data.language) return;
+      localStorage.setItem("preferred_language", data.language);
+      applySavedLanguage(data.language);
+    })
+    .catch(() => {});
 }
 
-function saveLanguagePreference() {
+function applySavedLanguage(language) {
+  const selectA = document.getElementById("language-select");
+  if (selectA) selectA.value = language;
+
+  const selectB = document.getElementById("languageSelect");
+  if (selectB) selectB.value = language;
+}
+
+async function saveLanguagePreference() {
   // Support both possible select IDs used in the templates
   const select =
     document.getElementById("language-select") ||
@@ -47,16 +56,25 @@ function saveLanguagePreference() {
   if (!select) return;
 
   const language = select.value;
-  localStorage.setItem("preferred_language", language);
 
-  // Optional backend persist
-  fetch("/api/set-language", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ language }),
-  }).catch(() => {});
+  try {
+    const response = await fetch("/api/set-language", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ language }),
+    });
+    const data = await response.json();
 
-  showToast("✅ Language saved: " + language);
+    if (!response.ok) {
+      throw new Error(data.error || "Language could not be saved.");
+    }
+
+    localStorage.setItem("preferred_language", data.language);
+    applySavedLanguage(data.language);
+    showToast("Language saved: " + data.language);
+  } catch (error) {
+    showToast(error.message || "Language could not be saved.", "error");
+  }
 }
 
 // ── Password Change Modal ─────────────────────────────────────────────────────

@@ -2,9 +2,11 @@ from flask import Blueprint, jsonify, request
 
 from src.services.ai_service import MODEL_MODE, generate_response
 from src.services.nlp_service import summarize_text, suggest_replies
+from src.services.translation import translate_text
 from src.web.ai_guard import require_ai_data_usage_enabled
 from src.web.ai_panel_routes import ai_query as ai_panel_query
 from src.web.compose_routes import compose_draft as compose_draft_handler
+from src.web.translation_routes import selected_language
 
 nlp_bp = Blueprint("nlp", __name__, url_prefix="/nlp")
 
@@ -65,6 +67,7 @@ def summarize():
             sender=sender,
             body=body,
         )
+        summary = translate_text(summary, selected_language())
         return jsonify({"success": True, "ai_mode": MODEL_MODE, "summary": summary})
     except Exception as exc:
         print("Summarization Error:", str(exc))

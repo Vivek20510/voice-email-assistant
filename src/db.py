@@ -59,11 +59,30 @@ def _ensure_schema_compatibility():
                         id INTEGER NOT NULL PRIMARY KEY,
                         user_id INTEGER NOT NULL UNIQUE,
                         ai_data_usage_enabled BOOLEAN NOT NULL DEFAULT 1,
+                        preferred_language VARCHAR(64) NOT NULL DEFAULT 'English',
                         created_at DATETIME,
                         updated_at DATETIME,
                         FOREIGN KEY(user_id) REFERENCES users (id)
                     )
                     """
+                )
+            )
+
+    inspector = inspect(db.engine)
+    preference_columns = {
+        column["name"]
+        for column in inspector.get_columns("user_preferences")
+    }
+
+    if "preferred_language" not in preference_columns:
+
+        with db.engine.begin() as connection:
+
+            connection.execute(
+                text(
+                    "ALTER TABLE user_preferences "
+                    "ADD COLUMN preferred_language VARCHAR(64) "
+                    "NOT NULL DEFAULT 'English'"
                 )
             )
 
