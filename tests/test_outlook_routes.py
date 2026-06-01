@@ -1,6 +1,52 @@
 """Integration tests for Outlook routes."""
 
 
+def test_outlook_refresh_requires_login(client):
+    response = client.post("/api/outlook/refresh")
+
+    assert response.status_code == 401
+    assert response.json["error"] == "Unauthorized."
+
+
+def test_outlook_refresh_returns_sync_started(client, monkeypatch):
+    client.post(
+        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+    )
+
+    from src.web import email_routes
+
+    monkeypatch.setattr(
+        email_routes, "refresh_outlook", lambda user_id: {"status": "sync_started"}
+    )
+
+    response = client.post("/api/outlook/refresh")
+
+    assert response.status_code == 202
+    assert response.json == {"status": "sync_started"}
+
+
+def test_outlook_refresh_serializes_service_error(client, monkeypatch):
+    client.post(
+        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+    )
+
+    from src.services.outlook_service import OutlookConnectionError
+    from src.web import email_routes
+
+    monkeypatch.setattr(
+        email_routes,
+        "refresh_outlook",
+        lambda user_id: (_ for _ in ()).throw(
+            OutlookConnectionError("Outlook is not connected for this account.", 409)
+        ),
+    )
+
+    response = client.post("/api/outlook/refresh")
+
+    assert response.status_code == 409
+    assert "not connected" in response.json["error"].lower()
+
+
 def test_outlook_toggle_requires_login(client):
     """Test that POST /api/channels/outlook requires authentication.
 
@@ -73,10 +119,16 @@ def test_outlook_inbox_returns_error_when_unavailable(client, monkeypatch):
     )
     client.post("/api/channels/outlook", json={"enabled": True})
 
-    # Mock is_outlook_available to return False
-    from src.services import outlook_service
+    from src.services.outlook_service import OutlookNotAvailableError
+    from src.web import email_routes
 
-    monkeypatch.setattr(outlook_service, "is_outlook_available", lambda: False)
+    monkeypatch.setattr(
+        email_routes,
+        "outlook_list_emails",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            OutlookNotAvailableError("Outlook is not installed or unavailable.", 503)
+        ),
+    )
 
     response = client.get("/api/outlook/inbox")
 

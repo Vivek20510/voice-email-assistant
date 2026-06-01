@@ -22,6 +22,22 @@ let activeInboxSort = "newest";
 
 let activeInboxFilter = "all";
 
+const OUTLOOK_NOTIFICATION_POLL_MS = 30000;
+
+const OUTLOOK_NOTIFICATION_SETTLE_MS = 2000;
+
+const knownOutlookMessageIds = new Set();
+
+let outlookNotificationMessages = [];
+
+let outlookNotificationUnseenCount = 0;
+
+let outlookNotificationsInitialized = false;
+
+let outlookNotificationRefreshInFlight = false;
+
+let outlookNotificationPollTimer = null;
+
 // ── View Metadata ─────────────────────────────────────────────────────────────
 
 const dashboardViewTitles = {
@@ -183,6 +199,282 @@ function updateInboxUnreadBadge() {
   badge.hidden = unreadCount === 0;
 }
 
+// ── Outlook Notifications ────────────────────────────────────────────────────
+
+function outlookMessagesFrom(messages) {
+  return (Array.isArray(messages) ? messages : []).filter(
+    (message) => String(message?.channel || "").toLowerCase() === "outlook",
+  );
+}
+
+function updateNotificationBadge() {
+  const badge = document.getElementById("notification-count");
+
+  if (!badge) return;
+
+  badge.textContent = String(outlookNotificationUnseenCount);
+
+  badge.hidden = outlookNotificationUnseenCount === 0;
+}
+
+function renderOutlookNotificationMenu() {
+  const list = document.getElementById("notification-list");
+
+  if (!list) return;
+
+  if (!outlookNotificationMessages.length) {
+    list.innerHTML =
+      '<p class="notification-empty">No new Outlook emails.</p>';
+    return;
+  }
+
+  list.innerHTML = outlookNotificationMessages
+    .map((message) => {
+      const sender = message.sender || message.sender_email || "Unknown sender";
+
+      const subject = message.subject || "(No subject)";
+
+      return `
+        <button type="button" class="notification-item" data-message-id="${escapeHtml(message.id)}">
+          <span class="notification-sender">${escapeHtml(sender)}</span>
+          <span class="notification-subject">${escapeHtml(subject)}</span>
+          <span class="notification-time">${escapeHtml(formatInboxTime(message.received_at))}</span>
+        </button>
+      `;
+    })
+    .join("");
+}
+
+function recordOutlookMessages(messages) {
+  const outlookMessages = outlookMessagesFrom(messages);
+
+  if (!outlookNotificationsInitialized) {
+    outlookMessages.forEach((message) => {
+      if (message.id) knownOutlookMessageIds.add(String(message.id));
+    });
+
+    outlookNotificationsInitialized = true;
+    return [];
+  }
+
+  const newMessages = outlookMessages.filter(
+    (message) => message.id && !knownOutlookMessageIds.has(String(message.id)),
+  );
+
+  outlookMessages.forEach((message) => {
+    if (message.id) knownOutlookMessageIds.add(String(message.id));
+  });
+
+  if (newMessages.length) {
+    const messagesById = new Map(
+      outlookNotificationMessages.map((message) => [String(message.id), message]),
+    );
+
+    newMessages.forEach((message) => messagesById.set(String(message.id), message));
+
+    outlookNotificationMessages = Array.from(messagesById.values());
+
+    outlookNotificationUnseenCount += newMessages.length;
+
+    updateNotificationBadge();
+    renderOutlookNotificationMenu();
+  }
+
+  return newMessages;
+}
+
+function replaceCachedOutlookMessages(messages) {
+  const outlookMessages = outlookMessagesFrom(messages);
+
+  inboxMessagesCacheByChannel[viewCacheKey("sb-outlook")] = outlookMessages;
+
+  const combinedCacheKey = viewCacheKey("sb-inbox");
+
+  if (
+    Object.prototype.hasOwnProperty.call(
+      inboxMessagesCacheByChannel,
+      combinedCacheKey,
+    )
+  ) {
+    const nonOutlookMessages = inboxMessagesCacheByChannel[
+      combinedCacheKey
+    ].filter(
+      (message) => String(message?.channel || "").toLowerCase() !== "outlook",
+    );
+
+    inboxMessagesCacheByChannel[combinedCacheKey] = [
+      ...nonOutlookMessages,
+      ...outlookMessages,
+    ];
+  }
+
+  if (currentDashboardView === "sb-outlook") {
+    inboxMessagesCache = outlookMessages;
+  } else if (
+    currentDashboardView === "sb-inbox" &&
+    inboxMessagesCacheByChannel[combinedCacheKey]
+  ) {
+    inboxMessagesCache = inboxMessagesCacheByChannel[combinedCacheKey];
+  }
+
+  updateInboxUnreadBadge();
+
+  if (
+    currentMessageId === null &&
+    ["sb-inbox", "sb-outlook"].includes(currentDashboardView)
+  ) {
+    renderCurrentInboxMessages();
+  }
+}
+
+function acknowledgeOutlookNotifications() {
+  outlookNotificationUnseenCount = 0;
+
+  updateNotificationBadge();
+}
+
+function toggleOutlookNotifications(event) {
+  if (event) event.stopPropagation();
+
+  const button = document.getElementById("notification-toggle");
+
+  const menu = document.getElementById("notification-menu");
+
+  if (!button || !menu) return;
+
+  const willOpen = menu.hidden;
+
+  menu.hidden = !willOpen;
+  button.setAttribute("aria-expanded", String(willOpen));
+
+  if (willOpen) {
+    renderOutlookNotificationMenu();
+    acknowledgeOutlookNotifications();
+    refreshOutlookNotifications({ manual: true });
+  }
+}
+
+function closeOutlookNotifications() {
+  const button = document.getElementById("notification-toggle");
+
+  const menu = document.getElementById("notification-menu");
+
+  if (!button || !menu) return;
+
+  menu.hidden = true;
+  button.setAttribute("aria-expanded", "false");
+}
+
+function waitForOutlookSync() {
+  return new Promise((resolve) => {
+    setTimeout(resolve, OUTLOOK_NOTIFICATION_SETTLE_MS);
+  });
+}
+
+async function refreshOutlookNotifications({ manual = false } = {}) {
+  if (outlookNotificationRefreshInFlight) return false;
+
+  outlookNotificationRefreshInFlight = true;
+
+  try {
+    const refreshResponse = await fetch("/api/outlook/refresh", {
+      method: "POST",
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+    });
+
+    let refreshPayload = {};
+
+    try {
+      refreshPayload = await refreshResponse.json();
+    } catch {
+      refreshPayload = {};
+    }
+
+    if (!refreshResponse.ok) {
+      if (manual)
+        showToast(refreshPayload.error || "Unable to refresh Outlook.", "error");
+
+      return false;
+    }
+
+    await waitForOutlookSync();
+
+    const inboxResponse = await fetch("/api/messages?limit=25&channel=outlook", {
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+    });
+
+    let inboxPayload = {};
+
+    try {
+      inboxPayload = await inboxResponse.json();
+    } catch {
+      inboxPayload = {};
+    }
+
+    if (!inboxResponse.ok) {
+      if (manual)
+        showToast(inboxPayload.error || "Unable to load Outlook messages.", "error");
+
+      return false;
+    }
+
+    const messages = Array.isArray(inboxPayload.messages)
+      ? inboxPayload.messages
+      : Array.isArray(inboxPayload.emails)
+        ? inboxPayload.emails
+        : [];
+
+    recordOutlookMessages(messages);
+    replaceCachedOutlookMessages(messages);
+
+    return true;
+  } catch {
+    if (manual) showToast("Network error while refreshing Outlook.", "error");
+
+    return false;
+  } finally {
+    outlookNotificationRefreshInFlight = false;
+  }
+}
+
+function initializeOutlookNotifications() {
+  const button = document.getElementById("notification-toggle");
+
+  if (!button) return;
+
+  updateNotificationBadge();
+  renderOutlookNotificationMenu();
+
+  button.addEventListener("click", toggleOutlookNotifications);
+
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".notification-center"))
+      closeOutlookNotifications();
+  });
+
+  const list = document.getElementById("notification-list");
+
+  if (list) {
+    list.addEventListener("click", (event) => {
+      const item = event.target.closest(".notification-item");
+
+      if (!item?.dataset.messageId) return;
+
+      closeOutlookNotifications();
+      loadMessageDetail(item.dataset.messageId);
+    });
+  }
+
+  if (outlookNotificationPollTimer === null) {
+    outlookNotificationPollTimer = setInterval(
+      refreshOutlookNotifications,
+      OUTLOOK_NOTIFICATION_POLL_MS,
+    );
+  }
+}
+
 // ── Cache Helpers ─────────────────────────────────────────────────────────────
 
 function getCachedInboxMessages(cacheKey, channel = cacheKey) {
@@ -263,33 +555,6 @@ function markMessageRead(messageId) {
   updateInboxUnreadBadge();
 }
 
-function markAllRead() {
-  const messages = currentCachedMessages();
-
-  if (!messages.length) {
-    showToast("No loaded messages to mark read", "warning");
-    return;
-  }
-
-  const markRead = (message) => ({
-    ...message,
-    unread: false,
-    labels: Array.isArray(message.labels)
-      ? message.labels.filter((label) => label !== "UNREAD")
-      : message.labels,
-  });
-
-  inboxMessagesCache = inboxMessagesCache.map(markRead);
-
-  Object.keys(inboxMessagesCacheByChannel).forEach((key) => {
-    inboxMessagesCacheByChannel[key] =
-      inboxMessagesCacheByChannel[key].map(markRead);
-  });
-
-  updateInboxUnreadBadge();
-  renderCurrentInboxMessages();
-  showToast("All loaded messages marked as read");
-}
 
 // ── Formatting Helpers ────────────────────────────────────────────────────────
 
@@ -682,9 +947,9 @@ function renderInboxMessages(messages) {
 
       const labelMarkup = labels.length
         ? labels
-            .slice(0, 2)
-            .map((l) => `<span class="inbox-chip">${escapeHtml(l)}</span>`)
-            .join("")
+          .slice(0, 2)
+          .map((l) => `<span class="inbox-chip">${escapeHtml(l)}</span>`)
+          .join("")
         : "";
 
       const groupMarkup =
@@ -785,6 +1050,8 @@ async function loadInboxMessages() {
     const cacheKey = viewCacheKey();
 
     inboxMessagesCacheByChannel[cacheKey] = messages;
+
+    recordOutlookMessages(messages);
 
     updateInboxUnreadBadge();
 
@@ -984,6 +1251,15 @@ function bindDashboardInteractions() {
 }
 
 if (typeof window !== "undefined") {
+  window.OutlookNotifications = {
+    acknowledge: acknowledgeOutlookNotifications,
+    initialize: initializeOutlookNotifications,
+    record: recordOutlookMessages,
+    refresh: refreshOutlookNotifications,
+    replaceCache: replaceCachedOutlookMessages,
+    toggle: toggleOutlookNotifications,
+  };
+
   window.AICommandCenter = {
     getActiveView: () => currentDashboardView,
     getActiveMessageId: () => currentMessageId || "",
