@@ -135,6 +135,7 @@ Get your voice email assistant up and running in minutes.
 Ensure you have the following installed on your machine:
 *   **Python:** Version `3.10` or `3.11`
 *   **FFmpeg:** Required for processing recorded audio formats (Whisper processing)
+*   **uroman:** Installed from `requirements.txt` for MMS-TTS languages that require romanization
 *   *(Optional)* **Docker Desktop:** For simple, containerized execution
 
 ### 🚀 Standard Setup
@@ -218,6 +219,18 @@ The application features a fully optimized Docker environment suitable for fast 
 | `HF_WHISPER_MODEL` | HuggingFace Whisper model path | `openai/whisper-small` |
 | `HF_MODEL_NAME` | Instruction drafting LLM | `Qwen/Qwen2.5-1.5B-Instruct` |
 | `TRANSLATION_HF_MODEL` | HuggingFaceTranslation model path | `facebook/mbart-large-50-many-to-many-mmt`|
+| `TTS_HF_TOKEN` | Optional Hugging Face token override for hosted MMS-TTS fallback | Uses `HF_TOKEN` |
+| `TTS_LOCAL_CACHE_PATH` | Optional local cache directory for MMS-TTS checkpoints | Hugging Face default cache |
+| `TTS_LOCAL_ENABLED` | Try local MMS-TTS inference before hosted inference | `true` |
+| `TTS_HF_ENABLED` | Allow hosted MMS-TTS fallback | `true` |
+| `TTS_HF_TIMEOUT_SECONDS` | Hosted MMS-TTS request timeout | `30` |
+| `TTS_MAX_TEXT_CHARS` | Maximum Read aloud request length | `4000` |
+
+### MMS Read Aloud Notes
+
+Read aloud uses Meta/Facebook MMS-TTS checkpoints and loads one language model at a time. The first request for a language may be slower while its checkpoint downloads or initializes. English, Hindi, Telugu, Tamil, Kannada, Bengali, French, Spanish, German, and Arabic are supported; Chinese and Japanese currently return a clear unsupported-language message.
+
+The MMS-TTS checkpoints use the `CC-BY-NC-4.0` license. Review the model license before using this feature in a commercial deployment.
 
 ---
 

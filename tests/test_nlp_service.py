@@ -59,16 +59,31 @@ def test_build_email_summary_input_normalizes_and_trims_long_email():
 
 
 def test_suggest_replies_returns_tone_dict(monkeypatch):
-    def fake_generate_response(prompt):
-        return "Sure, I can help.\nThank you for your message.\nI will follow up soon."
+    captured = {}
 
-    monkeypatch.setattr(nlp_service, "generate_response", fake_generate_response)
+    def fake_generate_qwen_replies(text, tones=None):
+        captured.update({"text": text, "tones": tones})
+        return {
+            "casual": "Sure, I can help.",
+            "formal": "Thank you for your message.",
+            "professional": "I will follow up soon.",
+        }
+
+    monkeypatch.setattr(
+        nlp_service,
+        "generate_qwen_replies",
+        fake_generate_qwen_replies,
+    )
 
     suggestions = suggest_replies("Can you help me?")
 
     assert isinstance(suggestions, dict)
     assert set(suggestions) == {"casual", "formal", "professional"}
     assert suggestions["casual"] == "Sure, I can help."
+    assert captured == {
+        "text": "Can you help me?",
+        "tones": ["casual", "formal", "professional"],
+    }
 
 
 def test_suggest_replies_falls_back_for_empty_text():

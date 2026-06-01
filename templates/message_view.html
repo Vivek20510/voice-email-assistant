@@ -23,7 +23,10 @@
         </div>
       </div>
 
-      <button class="read-aloud-btn" onclick="showToast('Reading aloud...')">
+      <button
+        class="read-aloud-btn"
+        onclick="EmailReadAloud.play({ button: this, summaryElement: this.closest('.summary-card').querySelector('.summary-text'), bodyElement: document.querySelector('#page-voicemail .msg-body-content') })"
+      >
         ▶ Read aloud
       </button>
     </div>
@@ -132,11 +135,17 @@ dashboard_message_view() }} {% else %} {% extends 'base.html' %} {% block
 extra_css %}
 <link rel="stylesheet" href="/static/css/message.css?v=theme-20260521" />
 <script src="/static/js/message_summary.js" defer></script>
+<script src="/static/js/read_aloud.js" defer></script>
 
 {% endblock %} {% block content %} {% set recent_messages =
 recent_messages|default([message]) %}
 
-<section class="message-view-page" data-message-id="{{ message_id }}">
+<section
+  class="message-view-page"
+  data-message-id="{{ message_id }}"
+  data-tts-body="{{ message.body_text }}"
+  data-reply-body="{{ message.body_text }}"
+>
   <div class="message-view-wrap">
     <div class="message-detail-topbar">
       <a href="{{ back_url }}" class="back-btn message-detail-back">← Back</a>
@@ -323,6 +332,16 @@ recent_messages|default([message]) %}
             </div>
 
             {% endfor %}
+          </div>
+
+          <div id="suggestions-generate-wrap" class="message-detail-suggestions-generate">
+            <button
+              id="generate-replies-btn"
+              type="button"
+              class="action-btn primary"
+            >
+              ✦ Generate Replies
+            </button>
           </div>
         </div>
       </div>

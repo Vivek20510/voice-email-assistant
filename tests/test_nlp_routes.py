@@ -58,13 +58,27 @@ def test_summarize_route_translates_to_selected_language(client, monkeypatch):
     assert captured == {"text": "Summary", "language": "Hindi"}
 
 
-def test_suggest_route_returns_suggestions(client):
+def test_suggest_route_returns_suggestions(client, monkeypatch):
+    monkeypatch.setattr(
+        "src.web.nlp_routes.suggest_replies",
+        lambda text: {
+            "casual": "Sure, I can help.",
+            "formal": "Thank you for your message.",
+            "professional": "I will follow up shortly.",
+        },
+    )
+    monkeypatch.setattr(
+        "src.web.nlp_routes.get_reply_model_mode",
+        lambda: "fallback",
+    )
+
     response = client.post(
         "/nlp/suggest", json={"text": "Please help with scheduling."}
     )
     assert response.status_code == 200
     assert "suggestions" in response.json
     assert isinstance(response.json["suggestions"], dict)
+    assert response.json["reply_mode"] == "fallback"
 
 
 def test_nlp_route_validation(client):

@@ -3,6 +3,7 @@ voice_routes.py
 
 Flask blueprint for Speech-to-Text endpoint.
 POST /api/voice/transcribe
+POST /api/voice/tts
 """
 
 from __future__ import annotations
@@ -11,9 +12,17 @@ import logging
 import os
 import tempfile
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request
 
+from src.services.preferences import normalize_language
+from src.services.translation import translate_text
+from src.services.tts import (
+    TTSUnavailableError,
+    UnsupportedTTSLanguageError,
+    synthesize_speech,
+)
 from src.services.voice import transcribe_audio
+from src.web.ai_guard import require_ai_data_usage_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +40,66 @@ ALLOWED_MIME_TYPES = {
 }
 
 MAX_AUDIO_BYTES = 10 * 1024 * 1024   # 10 MB hard limit
+MAX_TTS_TEXT_CHARS = int(os.getenv("TTS_MAX_TEXT_CHARS", "4000"))
+
+
+@voice_bp.route("/tts", methods=["POST"])
+def text_to_speech():
+    """Synthesize text with local MMS TTS, then fall back to hosted inference."""
+
+    disabled_response = require_ai_data_usage_enabled()
+    if disabled_response:
+        return disabled_response
+
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"success": False, "error": "Valid JSON object required."}), 400
+
+    text = payload.get("text")
+    if not isinstance(text, str):
+        return jsonify({"success": False, "error": "text must be a string."}), 400
+    text = text.strip()
+    if not text:
+        return jsonify({"success": False, "error": "Text is required."}), 400
+    if len(text) > MAX_TTS_TEXT_CHARS:
+        return jsonify(
+            {
+                "success": False,
+                "error": f"Text is too long (max {MAX_TTS_TEXT_CHARS} characters).",
+            }
+        ), 400
+
+    translate = payload.get("translate", False)
+    if not isinstance(translate, bool):
+        return jsonify({"success": False, "error": "translate must be a boolean."}), 400
+
+    try:
+        language = normalize_language(payload.get("language"))
+        spoken_text = translate_text(text, language) if translate else text
+        result = synthesize_speech(spoken_text, language)
+    except (ValueError, UnsupportedTTSLanguageError) as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+    except TTSUnavailableError as exc:
+        logger.warning("TTS unavailable: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 503
+    except Exception as exc:
+        logger.exception("Unexpected error during speech synthesis: %s", exc)
+        return jsonify({"success": False, "error": "Internal speech synthesis error."}), 500
+
+    extension = {
+        "audio/flac": "flac",
+        "audio/mpeg": "mp3",
+        "audio/ogg": "ogg",
+    }.get(result.content_type, "wav")
+    response = Response(result.audio, mimetype=result.content_type)
+    response.headers["Content-Disposition"] = (
+        f'inline; filename="read-aloud.{extension}"'
+    )
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["X-TTS-Source"] = result.source
+    response.headers["X-TTS-Language"] = result.language
+    response.headers["X-TTS-Model"] = result.model_id
+    return response
 
 
 @voice_bp.route("/transcribe", methods=["POST"])

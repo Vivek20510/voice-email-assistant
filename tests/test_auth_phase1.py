@@ -407,6 +407,8 @@ def test_message_view_renders_placeholder_content(client):
     assert b'id="archive-btn"' in response.data
     assert b'id="delete-btn"' in response.data
     assert b'id="suggestions-list"' in response.data
+    assert b'id="generate-replies-btn"' in response.data
+    assert b"reply_suggestions.js" in response.data
     assert b"Alice Rodriguez" in response.data
     assert b"Q3 Report Review - Feedback Needed" in response.data
     assert (

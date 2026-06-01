@@ -17,11 +17,10 @@ import re
 
 import logging
 
-from typing import Any
-
 # ✅ Core AI service
 
-from src.services.ai_service import generate_response, MODEL_MODE
+from src.services.ai_service import generate_response
+from src.services.qwen_reply_service import generate_qwen_replies
 
 logger = logging.getLogger(__name__)
 
@@ -39,15 +38,6 @@ MAX_SUMMARY_INPUT_CHARS = 6000
 SUMMARY_FALLBACK = (
     "Summary is temporarily unavailable. Please review the message below."
 )
-
-
-# ✅ Tone-based fallback replies
-
-_FALLBACK_REPLIES: dict[str, str] = {
-    "casual": "Hey, got your message! I'll take a look and get back to you soon.",
-    "formal": "Thank you for your correspondence. I will review this and respond shortly.",
-    "professional": "Thank you for reaching out. I will review this and follow up shortly.",
-}
 
 
 SUPPORTED_TONES = ["casual", "formal", "professional"]
@@ -215,77 +205,7 @@ def suggest_replies(
 
     tones = [t for t in tones if t in SUPPORTED_TONES] or SUPPORTED_TONES
 
-    # ✅ Empty input → fallback immediately
-
-    if not text or not text.strip():
-
-        return {t: _FALLBACK_REPLIES[t] for t in tones}
-
-    prompt = f"""
-
-You are an AI email assistant.
-
-
- 
-
-Generate ONE reply per tone for the following email.
-
-
- 
-
-Tones:
-
-- casual
-
-- formal
-
-- professional
-
-
- 
-
-Return clearly separated responses.
-
-
- 
-
-Email:
-
-{text}
-
-"""
-
-    try:
-
-        ai_output = generate_response(prompt)
-
-        if not ai_output:
-
-            raise ValueError("Empty AI response")
-
-        # ✅ Simple parsing strategy
-
-        lines = [line.strip() for line in ai_output.split("\n") if line.strip()]
-
-        results: dict[str, str] = {}
-
-        for i, tone in enumerate(tones):
-
-            if i < len(lines):
-
-                results[tone] = lines[i]
-
-            else:
-
-                results[tone] = _FALLBACK_REPLIES[tone]
-
-        return results
-
-    except Exception as exc:
-
-        logger.exception("suggest_replies failed: %s", exc)
-
-        return {t: _FALLBACK_REPLIES[t] for t in tones}
+    return generate_qwen_replies(text, tones=tones)
 
 
 # =========================================================
