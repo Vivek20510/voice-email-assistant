@@ -555,6 +555,33 @@ function markMessageRead(messageId) {
   updateInboxUnreadBadge();
 }
 
+function markAllRead() {
+  const messages = currentCachedMessages();
+
+  if (!messages.length) {
+    showToast("No loaded messages to mark read", "warning");
+    return;
+  }
+
+  const markRead = (message) => ({
+    ...message,
+    unread: false,
+    labels: Array.isArray(message.labels)
+      ? message.labels.filter((label) => label !== "UNREAD")
+      : message.labels,
+  });
+
+  inboxMessagesCache = inboxMessagesCache.map(markRead);
+
+  Object.keys(inboxMessagesCacheByChannel).forEach((key) => {
+    inboxMessagesCacheByChannel[key] =
+      inboxMessagesCacheByChannel[key].map(markRead);
+  });
+
+  updateInboxUnreadBadge();
+  renderCurrentInboxMessages();
+  showToast("All loaded messages marked as read");
+}
 
 // ── Formatting Helpers ────────────────────────────────────────────────────────
 
@@ -947,9 +974,9 @@ function renderInboxMessages(messages) {
 
       const labelMarkup = labels.length
         ? labels
-          .slice(0, 2)
-          .map((l) => `<span class="inbox-chip">${escapeHtml(l)}</span>`)
-          .join("")
+            .slice(0, 2)
+            .map((l) => `<span class="inbox-chip">${escapeHtml(l)}</span>`)
+            .join("")
         : "";
 
       const groupMarkup =

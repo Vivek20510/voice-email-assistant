@@ -1,0 +1,57 @@
+- main [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - img [ref=e9]
+          - link "Invoix" [ref=e12] [cursor=pointer]:
+            - /url: /
+        - generic [ref=e13]:
+          - text: One inbox
+          - text: for
+          - emphasis [ref=e14]: every
+          - text: Account.
+        - generic [ref=e15]: Email, WhatsApp, Telegram — unified, AI-powered, and beautifully simple.
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - generic [ref=e18]: 📄
+          - generic [ref=e19]: Smart Summaries
+          - generic [ref=e20]: Get concise summaries of long emails instantly.
+        - generic [ref=e21]:
+          - generic [ref=e22]: ✏️
+          - generic [ref=e23]: Reply Drafts
+          - generic [ref=e24]: Generate context-aware reply drafts in one click.
+        - generic [ref=e25]:
+          - generic [ref=e26]: 📥
+          - generic [ref=e27]: Unified Inbox
+          - generic [ref=e28]: Manage all conversations from one place.
+    - generic [ref=e30]:
+      - generic [ref=e31]: Create Account
+      - generic [ref=e32]: Register to get started
+      - generic [ref=e33]:
+        - link "Login" [ref=e34] [cursor=pointer]:
+          - /url: /auth/login
+        - link "Register" [ref=e35] [cursor=pointer]:
+          - /url: /auth/signup
+      - generic [ref=e36]:
+        - generic [ref=e37]:
+          - generic [ref=e38]: Full Name
+          - generic [ref=e39]:
+            - img [ref=e41]
+            - textbox "Priya Sharma" [ref=e44]
+        - generic [ref=e45]:
+          - generic [ref=e46]: Email
+          - generic [ref=e47]:
+            - img [ref=e49]
+            - textbox "you@example.com" [ref=e52]
+        - generic [ref=e53]:
+          - generic [ref=e54]: Password
+          - generic [ref=e55]:
+            - img [ref=e57]
+            - textbox "Create a password" [ref=e60]
+        - generic [ref=e61]:
+          - generic [ref=e62]: Confirm Password
+          - generic [ref=e63]:
+            - img [ref=e65]
+            - textbox "Confirm your password" [ref=e68]
+        - button "Create Account" [ref=e69] [cursor=pointer]
