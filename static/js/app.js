@@ -26,6 +26,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (typeof loadInboxMessages === "function") loadInboxMessages();
 
+  if (typeof initializeOutlookNotifications === "function")
+    initializeOutlookNotifications();
+
   // ── Compose attachment (single file toast) ──────────────────────────────────
 
   const fileInput = document.getElementById("compose-attachment");

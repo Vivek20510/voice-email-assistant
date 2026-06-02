@@ -96,21 +96,24 @@ def test_entry_id_validation_rejects_invalid_base64():
     assert _validate_entry_id(123) is False
 
 
-def test_list_emails_raises_error_when_outlook_unavailable():
+def test_list_emails_raises_error_when_outlook_unavailable(monkeypatch):
     """Test that list_emails raises OutlookNotAvailableError when unavailable.
 
     Edge case: Outlook not available (non-Windows or not installed) returns 503.
     """
+    from src.services import outlook_service
     from src.services.outlook_service import (
         OutlookNotAvailableError,
         list_emails,
     )
 
+    monkeypatch.setattr(outlook_service.sys, "platform", "linux")
+
     with pytest.raises(OutlookNotAvailableError) as exc_info:
         list_emails(user_id=1)
 
     assert exc_info.value.status_code == 503
-    assert "not installed" in exc_info.value.message.lower()
+    assert "windows" in exc_info.value.message.lower()
 
 
 def test_list_emails_returns_empty_list_when_no_messages(monkeypatch):
@@ -128,6 +131,81 @@ def test_list_emails_returns_empty_list_when_no_messages(monkeypatch):
     assert "ascending" in sig.parameters
 
 
+def test_refresh_outlook_starts_send_and_receive_without_progress_dialog(monkeypatch):
+    from src.services import outlook_service
+
+    calls = []
+
+    class DummyNamespace:
+        def SendAndReceive(self, show_progress):
+            calls.append(show_progress)
+
+    monkeypatch.setattr(outlook_service, "_outlook_token_for_user", lambda user_id: object())
+    monkeypatch.setattr(outlook_service, "is_outlook_available", lambda: True)
+    monkeypatch.setattr(outlook_service, "_outlook_namespace", lambda: DummyNamespace())
+
+    assert outlook_service.refresh_outlook(7) == {"status": "sync_started"}
+    assert calls == [False]
+
+
+def test_refresh_outlook_requires_connection_before_availability_check(monkeypatch):
+    from src.services import outlook_service
+
+    monkeypatch.setattr(
+        outlook_service,
+        "_outlook_token_for_user",
+        lambda user_id: (_ for _ in ()).throw(
+            outlook_service.OutlookConnectionError("Not connected.", 409)
+        ),
+    )
+    monkeypatch.setattr(
+        outlook_service,
+        "is_outlook_available",
+        lambda: (_ for _ in ()).throw(AssertionError("availability should not run")),
+    )
+
+    with pytest.raises(outlook_service.OutlookConnectionError) as exc_info:
+        outlook_service.refresh_outlook(7)
+
+    assert exc_info.value.status_code == 409
+
+
+def test_refresh_outlook_returns_503_when_classic_outlook_is_unavailable(monkeypatch):
+    from src.services import outlook_service
+
+    monkeypatch.setattr(outlook_service, "_outlook_token_for_user", lambda user_id: object())
+    monkeypatch.setattr(outlook_service.sys, "platform", "linux")
+
+    with pytest.raises(outlook_service.OutlookNotAvailableError) as exc_info:
+        outlook_service.refresh_outlook(7)
+
+    assert exc_info.value.status_code == 503
+    assert "windows" in exc_info.value.message.lower()
+
+
+def test_outlook_namespace_maps_windows_session_mismatch(monkeypatch):
+    import pythoncom
+    import win32com.client
+
+    from src.services import outlook_service
+
+    monkeypatch.setattr(pythoncom, "CoInitialize", lambda: None)
+    monkeypatch.setattr(pythoncom, "CoUninitialize", lambda: None)
+    monkeypatch.setattr(
+        win32com.client,
+        "Dispatch",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            Exception("-2147023584 A specified logon session does not exist")
+        ),
+    )
+
+    with pytest.raises(outlook_service.OutlookConnectionError) as exc_info:
+        outlook_service._outlook_namespace()
+
+    assert exc_info.value.status_code == 409
+    assert "same signed-in desktop session" in exc_info.value.message
+
+
 def test_list_emails_with_mocked_com_objects():
     """Test list_emails with realistic mocked Outlook COM objects.
 
@@ -140,6 +218,7 @@ def test_list_emails_with_mocked_com_objects():
         - Logging indicates the issue
     """
     from src.services.outlook_service import (
+        OutlookConnectionError,
         OutlookNotAvailableError,
         list_emails,
     )
@@ -154,17 +233,24 @@ def test_list_emails_with_mocked_com_objects():
         # Expected on systems without Outlook
         assert e.status_code == 503
         assert "Outlook is not installed" in str(e)
+    except OutlookConnectionError as e:
+        # Expected when Outlook belongs to a different Windows desktop session
+        assert e.status_code == 409
+        assert "same signed-in desktop session" in str(e)
 
 
-def test_read_email_raises_error_when_outlook_unavailable():
+def test_read_email_raises_error_when_outlook_unavailable(monkeypatch):
     """Test that read_email raises OutlookNotAvailableError when unavailable.
 
     Edge case: Outlook not available returns 503.
     """
+    from src.services import outlook_service
     from src.services.outlook_service import (
         OutlookNotAvailableError,
         read_email,
     )
+
+    monkeypatch.setattr(outlook_service.sys, "platform", "linux")
 
     with pytest.raises(OutlookNotAvailableError) as exc_info:
         read_email(user_id=1, encoded_message_id="dGVzdA==")
@@ -172,7 +258,7 @@ def test_read_email_raises_error_when_outlook_unavailable():
     assert exc_info.value.status_code == 503
 
 
-def test_read_email_raises_error_on_invalid_entry_id():
+def test_read_email_raises_error_on_invalid_entry_id(monkeypatch):
     """Test that read_email raises 400 for invalid base64 format BEFORE checking Outlook.
 
     This tests error separation: input validation (400) before availability check (503).
@@ -182,7 +268,10 @@ def test_read_email_raises_error_on_invalid_entry_id():
         - Valid base64 but Outlook unavailable: Should return 503
         - Valid base64, Outlook available, message not found: Should return 404
     """
+    from src.services import outlook_service
     from src.services.outlook_service import OutlookServiceError, read_email
+
+    monkeypatch.setattr(outlook_service.sys, "platform", "linux")
 
     with pytest.raises(OutlookServiceError) as exc_info:
         # This will fail validation BEFORE checking Outlook availability

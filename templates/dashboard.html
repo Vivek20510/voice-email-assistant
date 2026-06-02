@@ -25,29 +25,39 @@
       <!-- TOP NAV -->
 
       <nav class="topnav">
-        <div class="nav-brand">
+        <a class="nav-brand" href="{{ url_for('auth.dashboard') }}">
           <div class="nav-brand-mark">✉</div>
 
-          <span class="nav-brand-name">Voice Mail</span>
-        </div>
-
-        <div class="nav-search">
-          <span class="search-ico">⌕</span>
-
-          <input
-            type="text"
-            placeholder="Search messages, people, channels…"
-            oninput="handleNavSearch(this.value)"
-          />
-        </div>
+          <span class="nav-brand-name">Invoxis</span>
+        </a>
 
         <div class="nav-right">
-          <button
-            class="nav-btn notif-badge"
-            onclick="showToast('No new notifications')"
-          >
-            🔔
-          </button>
+          <div class="notification-center">
+            <button
+              id="notification-toggle"
+              type="button"
+              class="nav-btn notif-badge"
+              aria-label="Outlook new email notifications"
+              aria-expanded="false"
+              aria-controls="notification-menu"
+            >
+              🔔
+              <span id="notification-count" class="notification-count" hidden>0</span>
+            </button>
+
+            <div
+              id="notification-menu"
+              class="notification-menu"
+              role="region"
+              aria-label="New Outlook emails"
+              hidden
+            >
+              <div class="notification-menu-header">New Outlook emails</div>
+              <div id="notification-list" class="notification-list">
+                <p class="notification-empty">No new Outlook emails.</p>
+              </div>
+            </div>
+          </div>
 
           <button class="nav-btn" onclick="switchPage('settings')">
             ⚙ Settings
@@ -136,7 +146,7 @@
 
           <div class="sidebar-divider"></div>
 
-          <div class="sidebar-label">Channels</div>
+          <div class="sidebar-label">Accounts</div>
 
           <div
             class="sidebar-item"
@@ -197,14 +207,6 @@
           >
             Promotions
           </div>
-
-          <div class="va-status-box">
-            <div class="va-status-top">
-              <span class="va-dot"></span> Voice Assistant
-            </div>
-
-            <div class="va-sub">Online · Ready to help</div>
-          </div>
         </aside>
 
         <!-- PAGE: DASHBOARD -->
@@ -214,12 +216,6 @@
             <h1 id="dashboard-title">Inbox</h1>
 
             <div id="dashboard-toolbar-actions" class="inbox-toolbar-actions">
-              <button
-                class="tool-btn"
-                onclick="markAllRead()"
-              >
-                ✓ Mark all read
-              </button>
 
               <div class="tool-dropdown">
                 <button class="tool-btn" onclick="toggleMenu('sortMenu')">
@@ -231,7 +227,7 @@
 
                   <div onclick="applySort('oldest')">Oldest first</div>
 
-                  <div onclick="applySort('sender')">Sender (A–Z)</div>
+                  <div onclick="applySort('sender')">Sender (A-Z)</div>
                 </div>
               </div>
 

@@ -17,6 +17,7 @@ from src.services.outlook_service import (
     OutlookConnectionError,
     list_emails as outlook_list_emails,
     read_email as outlook_read_email,
+    refresh_outlook,
 )
 
 email_bp = Blueprint("email", __name__, url_prefix="/email")
@@ -438,6 +439,20 @@ def api_outlook_inbox():
         return _serialize_service_error(exc)
 
     return jsonify(result)
+
+
+@messages_bp.route("/outlook/refresh", methods=["POST"])
+def api_outlook_refresh():
+    auth_error = _require_login()
+    if auth_error:
+        return auth_error
+
+    try:
+        result = refresh_outlook(_current_user_id())
+    except EmailServiceError as exc:
+        return _serialize_service_error(exc)
+
+    return jsonify(result), 202
 
 
 @messages_bp.route("/outlook/inbox/<message_id>", methods=["GET"])

@@ -1,7 +1,7 @@
 <!-- signup.html -->
 
 {% extends 'base.html' %} {% block extra_css %}
-<link rel="stylesheet" href="/static/css/auth.css?v=theme-20260521" />
+<link rel="stylesheet" href="/static/css/auth.css?v=theme-20260529-hill-wash" />
 {% endblock %} {% block content %}
 
 <div id="screen-login" class="screen active">
@@ -15,38 +15,60 @@
 
       <div class="login-left-content">
         <div class="login-brand">
-          <div class="login-brand-mark">✉</div>
+          <div class="login-brand-mark">
+            <svg viewBox="0 0 24 24" class="brand-svg" aria-hidden="true">
+              <path
+                d="M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              />
+              <path
+                d="m5 8 7 5 7-5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
 
-          <a href="/" class="login-brand-name">Voice Mail</a>
+          <a href="/" class="login-brand-name">Invoix</a>
         </div>
 
         <div class="login-headline">
-          One inbox<br />for <em>every</em><br />channel.
+          One inbox<br />for <em>every</em><br />Account.
         </div>
 
         <div class="login-subline">
-          Email, WhatsApp, Telegram — unified, AI-powered, and beautifully
+          Email, WhatsApp, Telegram &mdash; unified, AI-powered, and beautifully
           simple.
         </div>
       </div>
-
       <div class="login-left-footer">
-        <div class="login-stat">
-          <div class="login-stat-val">248</div>
-
-          <div class="login-stat-lbl">Messages</div>
+        <div class="feature-card">
+          <div class="feature-icon">📄</div>
+          <div class="feature-title">Smart Summaries</div>
+          <div class="feature-text">
+            Get concise summaries of long emails instantly.
+          </div>
         </div>
 
-        <div class="login-stat">
-          <div class="login-stat-val">3</div>
-
-          <div class="login-stat-lbl">Channels</div>
+        <div class="feature-card">
+          <div class="feature-icon">✏️</div>
+          <div class="feature-title">Reply Drafts</div>
+          <div class="feature-text">
+            Generate context-aware reply drafts in one click.
+          </div>
         </div>
 
-        <div class="login-stat">
-          <div class="login-stat-val">31</div>
-
-          <div class="login-stat-lbl">AI replies</div>
+        <div class="feature-card">
+          <div class="feature-icon">📥</div>
+          <div class="feature-title">Unified Inbox</div>
+          <div class="feature-text">
+            Manage all conversations from one place.
+          </div>
         </div>
       </div>
     </div>
@@ -54,7 +76,7 @@
     <!-- Right Panel -->
 
     <div class="login-right">
-      <div class="login-card">
+      <div class="login-card signup-card">
         <div class="login-card-title">Create Account</div>
 
         <div class="login-card-sub">Register to get started</div>
@@ -81,15 +103,35 @@
           <div class="form-group">
             <label class="form-label">Full Name</label>
 
-            <input
-              type="text"
-              name="name"
-              class="form-input"
-              placeholder="Priya Sharma"
-              value="{{ name_value|default('') }}"
-              required
-              oninput="hideSignupError()"
-            />
+            <div class="input-wrap">
+              <span class="field-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <circle
+                    cx="12"
+                    cy="8"
+                    r="4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M5 21a7 7 0 0 1 14 0"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </span>
+
+              <input
+                type="text"
+                name="name"
+                class="form-input"
+                placeholder="Priya Sharma"
+                value="{{ name_value|default('') }}"
+                required
+                oninput="hideSignupError()"
+              />
+            </div>
           </div>
 
           <!-- Email -->
@@ -97,15 +139,35 @@
           <div class="form-group">
             <label class="form-label">Email</label>
 
-            <input
-              type="email"
-              name="email"
-              class="form-input"
-              placeholder="you@example.com"
-              value="{{ email_value|default('') }}"
-              required
-              oninput="hideSignupError()"
-            />
+            <div class="input-wrap">
+              <span class="field-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <circle
+                    cx="12"
+                    cy="8"
+                    r="4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M5 21a7 7 0 0 1 14 0"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </span>
+
+              <input
+                type="email"
+                name="email"
+                class="form-input"
+                placeholder="you@example.com"
+                value="{{ email_value|default('') }}"
+                required
+                oninput="hideSignupError()"
+              />
+            </div>
           </div>
 
           <!-- Password -->
@@ -113,19 +175,107 @@
           <div class="form-group">
             <label class="form-label">Password</label>
 
-            <input
-              type="password"
-              name="password"
-              id="password"
-              class="form-input"
-              placeholder="Create a password"
-              required
-              oninput="
-                checkPassword();
+            <div class="input-wrap">
+              <span class="field-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <rect
+                    x="5"
+                    y="10"
+                    width="14"
+                    height="10"
+                    rx="2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M8 10V7a4 4 0 0 1 8 0v3"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M12 14v2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </span>
 
-                hideSignupError();
-              "
-            />
+              <input
+                type="password"
+                name="password"
+                id="password"
+                class="form-input"
+                placeholder="Create a password"
+                required
+                oninput="
+                  checkPassword();
+
+                  hideSignupError();
+                "
+              />
+
+              <button
+                type="button"
+                class="password-eye"
+                aria-label="Show password"
+                onclick="togglePassword('password', this)"
+              >
+                <svg
+                  class="eye-open"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="3"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                <svg
+                  class="eye-closed"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M3 3l18 18"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M10.6 10.6A2 2 0 0 0 13.4 13.4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M9.5 5.4A9.5 9.5 0 0 1 12 5c6 0 10 7 10 7a18 18 0 0 1-2.6 3.3"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M6.3 6.9C3.6 8.7 2 12 2 12s4 7 10 7a9.9 9.9 0 0 0 4.3-1"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
 
             <small
               class="password-note"
@@ -142,14 +292,103 @@
           <div class="form-group">
             <label class="form-label">Confirm Password</label>
 
-            <input
-              type="password"
-              name="confirm_password"
-              class="form-input"
-              placeholder="Confirm your password"
-              required
-              oninput="hideSignupError()"
-            />
+            <div class="input-wrap">
+              <span class="field-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <rect
+                    x="5"
+                    y="10"
+                    width="14"
+                    height="10"
+                    rx="2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <path
+                    d="M8 10V7a4 4 0 0 1 8 0v3"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M12 14v2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </span>
+
+              <input
+                type="password"
+                name="confirm_password"
+                id="confirmPassword"
+                class="form-input"
+                placeholder="Confirm your password"
+                required
+                oninput="hideSignupError()"
+              />
+
+              <button
+                type="button"
+                class="password-eye"
+                aria-label="Show password"
+                onclick="togglePassword('confirmPassword', this)"
+              >
+                <svg
+                  class="eye-open"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="3"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+                <svg
+                  class="eye-closed"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M3 3l18 18"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M10.6 10.6A2 2 0 0 0 13.4 13.4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
+                  <path
+                    d="M9.5 5.4A9.5 9.5 0 0 1 12 5c6 0 10 7 10 7a18 18 0 0 1-2.6 3.3"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M6.3 6.9C3.6 8.7 2 12 2 12s4 7 10 7a9.9 9.9 0 0 0 4.3-1"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <!-- Error Message -->
@@ -190,6 +429,22 @@
     } else {
       hint.style.display = "none";
     }
+  }
+
+  function togglePassword(inputId, button) {
+    const input = document.getElementById(inputId);
+
+    if (!input) {
+      return;
+    }
+
+    const showing = input.type === "text";
+    input.type = showing ? "password" : "text";
+    button.classList.toggle("is-visible", !showing);
+    button.setAttribute(
+      "aria-label",
+      showing ? "Show password" : "Hide password",
+    );
   }
 </script>
 

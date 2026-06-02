@@ -362,11 +362,16 @@ def test_dashboard_contains_inbox_and_settings_bootstrap_state(client):
     assert b'id="dashboard-state"' in response.data
     assert b'data-initial-page="settings"' in response.data
     assert b'data-initial-tab="channels"' in response.data
+    assert b'<a class="nav-brand" href="/auth/dashboard">' in response.data
     assert b'id="dashboard-body"' in response.data
     assert b'id="dashboard-title"' in response.data
     assert b'id="dashboard-toolbar-actions"' in response.data
     assert b'id="inbox-content"' in response.data
     assert b'id="dashboard-ai-panel"' in response.data
+    assert b'id="notification-toggle"' in response.data
+    assert b'id="notification-count"' in response.data
+    assert b'id="notification-menu"' in response.data
+    assert b'id="notification-list"' in response.data
     assert b"Loading inbox..." in response.data
     assert b"Connect Gmail" in response.data
     assert b"js/message_summary.js" in response.data

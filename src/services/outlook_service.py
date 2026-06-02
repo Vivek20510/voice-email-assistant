@@ -75,17 +75,26 @@ def connect_outlook(user_id: int) -> dict:
     return {"message": "Outlook connected.", "account_email": account_email}
 
 
+def refresh_outlook(user_id: int) -> dict:
+    _outlook_token_for_user(user_id)
+
+    namespace = _require_outlook_namespace()
+    try:
+        namespace.SendAndReceive(False)
+    except Exception as exc:
+        raise OutlookAPIError("Unable to refresh Outlook messages.", 503) from exc
+
+    return {"status": "sync_started"}
+
+
 def list_emails(
     user_id: int,
     limit: int = 25,
     sort_by: str = "received_at",
     ascending: bool = False,
 ) -> dict:
-    if not is_outlook_available():
-        raise OutlookNotAvailableError("Outlook is not installed or unavailable.", 503)
-
+    outlook = _require_outlook_namespace()
     _outlook_token_for_user(user_id)
-    outlook = _outlook_namespace()
     inbox = outlook.GetDefaultFolder(OUTLOOK_INBOX_FOLDER)
     items = inbox.Items
     items.Sort("[ReceivedTime]", bool(ascending))
@@ -110,14 +119,12 @@ def read_email(
     encoded_message_id: str | None = None,
 ) -> dict:
     message_id = message_id or encoded_message_id
-    if not is_outlook_available():
-        raise OutlookNotAvailableError("Outlook is not installed or unavailable.", 503)
-
+    outlook = _require_outlook_namespace()
     _outlook_token_for_user(user_id)
     entry_id = _decode_message_id(message_id or "")
 
     try:
-        item = _outlook_namespace().GetItemFromID(entry_id)
+        item = outlook.GetItemFromID(entry_id)
     except Exception as exc:
         raise OutlookAPIError("Unable to load this Outlook message.", 404) from exc
     return _normalize_message(item)
@@ -128,6 +135,15 @@ def _outlook_token_for_user(user_id: int) -> UserToken:
     if token is None:
         raise OutlookConnectionError("Outlook is not connected for this account.", 409)
     return token
+
+
+def _require_outlook_namespace():
+    if sys.platform != "win32":
+        raise OutlookNotAvailableError(
+            "Classic Outlook desktop automation is only available on Windows.",
+            503,
+        )
+    return _outlook_namespace()
 
 
 def _outlook_namespace():
@@ -148,10 +164,20 @@ def _outlook_namespace():
         return namespace
     except Exception as exc:
         detail = str(exc)
+        try:
+            pythoncom.CoUninitialize()
+        except Exception:
+            pass
         if "Invalid class string" in detail or "-2147221005" in detail:
             raise OutlookNotAvailableError(
                 "Outlook is not installed or classic desktop Outlook is not registered.",
                 503,
+            ) from exc
+        if "A specified logon session does not exist" in detail or "-2147023584" in detail:
+            raise OutlookConnectionError(
+                "Unable to access local Outlook from this Windows session. Run the app "
+                "from the same signed-in desktop session as classic Outlook.",
+                409,
             ) from exc
         raise OutlookConnectionError(
             "Unable to access local Outlook. Open classic Outlook and make sure a profile is configured.",
