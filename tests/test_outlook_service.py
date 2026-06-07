@@ -127,8 +127,55 @@ def test_list_emails_returns_empty_list_when_no_messages(monkeypatch):
     sig = inspect.signature(list_emails)
     assert "user_id" in sig.parameters
     assert "limit" in sig.parameters
+    assert "folder" in sig.parameters
     assert "sort_by" in sig.parameters
     assert "ascending" in sig.parameters
+
+
+def test_list_emails_uses_requested_outlook_default_folder(monkeypatch):
+    from src.services import outlook_service
+
+    requested_folder_ids = []
+
+    class DummyItems:
+        Count = 0
+
+        def Sort(self, field, ascending):
+            self.sorted = (field, ascending)
+
+    class DummyFolder:
+        Items = DummyItems()
+
+    class DummyNamespace:
+        def GetDefaultFolder(self, folder_id):
+            requested_folder_ids.append(folder_id)
+            return DummyFolder()
+
+    monkeypatch.setattr(outlook_service, "_outlook_token_for_user", lambda user_id: object())
+    monkeypatch.setattr(outlook_service, "_require_outlook_namespace", lambda: DummyNamespace())
+
+    result = outlook_service.list_emails(7, folder="archive")
+
+    assert requested_folder_ids == [outlook_service.OUTLOOK_ARCHIVE_FOLDER]
+    assert result["folder"] == "archive"
+    assert result["total_count"] == 0
+
+
+def test_outlook_archive_folder_unavailable_returns_connection_error(monkeypatch):
+    from src.services import outlook_service
+
+    class DummyNamespace:
+        def GetDefaultFolder(self, folder_id):
+            raise Exception("Archive missing")
+
+    monkeypatch.setattr(outlook_service, "_outlook_token_for_user", lambda user_id: object())
+    monkeypatch.setattr(outlook_service, "_require_outlook_namespace", lambda: DummyNamespace())
+
+    with pytest.raises(outlook_service.OutlookConnectionError) as exc_info:
+        outlook_service.list_emails(7, folder="archive")
+
+    assert exc_info.value.status_code == 409
+    assert "Archive folder" in exc_info.value.message
 
 
 def test_refresh_outlook_starts_send_and_receive_without_progress_dialog(monkeypatch):

@@ -41,8 +41,22 @@ class GmailAPIError(EmailServiceError):
     """Raised when Gmail returns an unexpected API failure."""
 
 
+GMAIL_FOLDER_LABELS = {
+    "inbox": ["INBOX"],
+    "draft": ["DRAFT"],
+    "sent": ["SENT"],
+    "trash": ["TRASH"],
+}
+
+GMAIL_ARCHIVE_QUERY = "-in:inbox -in:sent -in:drafts -in:trash -in:spam"
+
+
 def list_emails(
-    user_id: int, limit: int = 10, page_token: str | None = None, label_ids=None
+    user_id: int,
+    limit: int = 10,
+    page_token: str | None = None,
+    label_ids=None,
+    folder: str = "inbox",
 ) -> dict:
     """List Gmail messages for a connected user."""
 
@@ -54,9 +68,19 @@ def list_emails(
 
         params["pageToken"] = page_token
 
+    folder = _normalize_folder(folder)
+
     if label_ids:
 
         params["labelIds"] = label_ids
+
+    elif folder in GMAIL_FOLDER_LABELS:
+
+        params["labelIds"] = GMAIL_FOLDER_LABELS[folder]
+
+    elif folder == "archive":
+
+        params["q"] = GMAIL_ARCHIVE_QUERY
 
     payload = _gmail_request(user_token, "GET", "/messages", params=params)
 
@@ -74,6 +98,10 @@ def list_emails(
         "emails": normalized_messages,
         "messages": normalized_messages,
         "next_page_token": payload.get("nextPageToken"),
+        "total_count": payload.get("resultSizeEstimate", len(normalized_messages)),
+        "unread_count": sum(1 for message in normalized_messages if message.get("unread")),
+        "folder": folder,
+        "channel": "gmail",
     }
 
 
@@ -194,6 +222,34 @@ def _gmail_token_for_user(user_id: int) -> UserToken:
         raise GmailConnectionError("Gmail is not connected for this account.", 409)
 
     return user_token
+
+
+def _normalize_folder(folder: str | None) -> str:
+
+    value = (folder or "inbox").strip().lower()
+
+    aliases = {
+        "sb-inbox": "inbox",
+        "sb-draft": "draft",
+        "drafts": "draft",
+        "sb-sent": "sent",
+        "sentmail": "sent",
+        "sent-mail": "sent",
+        "sb-archive": "archive",
+        "archives": "archive",
+        "sb-trash": "trash",
+        "deleted": "trash",
+        "deleteditems": "trash",
+        "deleted-items": "trash",
+    }
+
+    value = aliases.get(value, value)
+
+    if value not in {"inbox", "draft", "sent", "archive", "trash"}:
+
+        raise EmailServiceError("Unsupported Gmail folder.", 400)
+
+    return value
 
 
 def _gmail_request(

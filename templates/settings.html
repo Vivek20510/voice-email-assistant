@@ -19,7 +19,6 @@
 
       </div>
 
-
  
 
       <div class="settings-nav-item" onclick="switchSettingsTab(this, 'spanel-voice')">
@@ -888,6 +887,24 @@
 
         </div>
 
+        <div class="settings-row">
+
+          <div class="settings-row-left">
+
+            <div class="settings-row-label">Security Questions</div>
+
+            <div class="settings-row-desc">Update or set your two security questions (answers hidden)</div>
+
+          </div>
+
+          <div class="settings-row-right">
+
+            <button type="button" class="btn-save" onclick="openSecurityQuestionsModal()">Set / Update</button>
+
+          </div>
+
+        </div>
+
       </div>
 
       <div class="settings-save-row">
@@ -1183,6 +1200,43 @@
 
   </div>
 
+</div>
+
+
+<!-- Security Questions Modal -->
+<div id="securityQuestionsModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeSecurityQuestionsModal()">&times;</span>
+    <h3>Set Security Questions</h3>
+
+    <label>Question 1</label>
+    <select id="security_question_1" class="settings-select-sm security-question-select">
+      <option value="">Choose a question</option>
+      {% for question in security_questions %}
+      <option value="{{ question }}">{{ question }}</option>
+      {% endfor %}
+    </select>
+
+    <label>Answer 1</label>
+    <input type="text" id="security_answer_1" class="settings-input-sm" placeholder="Your answer">
+
+    <label>Question 2</label>
+    <select id="security_question_2" class="settings-select-sm security-question-select">
+      <option value="">Choose a different question</option>
+      {% for question in security_questions %}
+      <option value="{{ question }}">{{ question }}</option>
+      {% endfor %}
+    </select>
+
+    <label>Answer 2</label>
+    <input type="text" id="security_answer_2" class="settings-input-sm" placeholder="Your answer">
+
+    <small id="securityQuestionsHint" class="validation-error">Choose two different questions and enter answers with at least 3 characters.</small>
+
+    <br><br>
+    <button class="btn-save" onclick="saveSecurityQuestions()">Save</button>
+    <button class="btn-cancel" onclick="closeSecurityQuestionsModal()">Cancel</button>
+  </div>
 </div>
 
 

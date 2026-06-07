@@ -464,7 +464,7 @@ def test_ai_routes_return_403_when_ai_data_usage_disabled(
 
     client.post(
         "/auth/signup",
-        json={"email": "ai-disabled@example.com", "password": "SecurePass123"},
+        json={"email": "ai-disabled@example.com", "password": "SecurePass123", "security_question_1": "What city were you born in?", "security_answer_1": "Mumbai", "security_question_2": "What is your first school?", "security_answer_2": "Central"},
     )
     client.post("/auth/update-privacy-preferences", json={"ai_data_usage_enabled": False})
 
@@ -477,3 +477,4 @@ def test_ai_routes_return_403_when_ai_data_usage_disabled(
         "code": 403,
         "ai_data_usage_enabled": False,
     }
+

@@ -2,7 +2,7 @@
   const DEFAULT_LABEL = "▶ Read aloud";
   const STOP_LABEL = "■ Stop";
   const SUMMARY_PLACEHOLDERS = [
-    "click \"summarize\"",
+    'click "summarize"',
     "ai summary will appear",
     "summary is temporarily unavailable",
     "no message content is available",
@@ -16,7 +16,9 @@
   let currentController = null;
 
   function clean(value) {
-    return String(value || "").replace(/\s+/g, " ").trim();
+    return String(value || "")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   function notify(message, type) {
@@ -57,7 +59,9 @@
     const summary = clean(summaryElement?.textContent);
     if (!summary || summary.length < 15) return "";
     const lower = summary.toLowerCase();
-    if (SUMMARY_PLACEHOLDERS.some((placeholder) => lower.includes(placeholder))) {
+    if (
+      SUMMARY_PLACEHOLDERS.some((placeholder) => lower.includes(placeholder))
+    ) {
       return "";
     }
     return summary;
@@ -152,7 +156,9 @@
 
   function bindStandalone() {
     const button = document.getElementById("read-aloud-btn");
-    const page = document.querySelector(".message-view-page:not(.message-view-page-inline)");
+    const page = document.querySelector(
+      ".message-view-page:not(.message-view-page-inline)",
+    );
     if (!button || !page) return;
     button.addEventListener("click", () =>
       play({

@@ -14,6 +14,14 @@ class User(db.Model):
     email = db.Column(db.String(255), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    # Security questions and hashed answers (optional in DB; enforced at signup)
+    security_question_1 = db.Column(db.String(255), nullable=True)
+    security_answer_1_hash = db.Column(db.String(255), nullable=True)
+    security_question_2 = db.Column(db.String(255), nullable=True)
+    security_answer_2_hash = db.Column(db.String(255), nullable=True)
+    # Brute-force protection for security question verification
+    security_failed_attempts = db.Column(db.Integer, nullable=False, default=0)
+    security_locked_until = db.Column(db.DateTime, nullable=True)
 
     tokens = db.relationship(
         "UserToken", back_populates="user", cascade="all, delete-orphan"

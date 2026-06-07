@@ -2,11 +2,23 @@ from urllib.parse import parse_qs, urlparse
 
 from src.db import db
 from src.models import User, UserPreference, UserToken
+from src.services.auth import hash_password
 
 
-def test_signup_and_status(client):
+def _signup_payload(email="user@example.com", password="SecurePass123"):
+    return {
+        "email": email,
+        "password": password,
+        "security_question_1": "What city were you born in?",
+        "security_answer_1": "Mumbai",
+        "security_question_2": "What is your first school's name?",
+        "security_answer_2": "Central",
+    }
+
+
+def test_signup_and_status(client, app):
     signup_response = client.post(
-        "/auth/signup", json={"email": "vivek@example.com", "password": "P@ssw0rd"}
+        "/auth/signup", json=_signup_payload("vivek@example.com", "P@ssw0rd")
     )
     assert signup_response.status_code == 200
     assert signup_response.json["email"] == "vivek@example.com"
@@ -15,15 +27,22 @@ def test_signup_and_status(client):
     assert status_response.status_code == 200
     assert status_response.json["email"] == "vivek@example.com"
 
+    with app.app_context():
+        user = User.query.filter_by(email="vivek@example.com").first()
+        assert user.security_question_1 == "What city were you born in?"
+        assert user.security_answer_1_hash
+        assert user.security_question_2 == "What is your first school's name?"
+        assert user.security_answer_2_hash
+
 
 def test_signup_duplicate_email(client):
     first_response = client.post(
-        "/auth/signup", json={"email": "vivek@example.com", "password": "P@ssw0rd"}
+        "/auth/signup", json=_signup_payload("vivek@example.com", "P@ssw0rd")
     )
     assert first_response.status_code == 200
 
     second_response = client.post(
-        "/auth/signup", json={"email": "vivek@example.com", "password": "NewPass123"}
+        "/auth/signup", json=_signup_payload("vivek@example.com", "NewPass123")
     )
     assert second_response.status_code == 409
     assert second_response.json["error"] == "Email address already registered."
@@ -40,13 +59,132 @@ def test_login_invalid_credentials(client):
 def test_signup_missing_fields(client):
     response = client.post("/auth/signup", json={"email": "invalid@example.com"})
     assert response.status_code == 400
-    assert response.json["error"] == "Email and password are required."
+    assert (
+        response.json["error"]
+        == "Email, password, and two security questions/answers are required."
+    )
 
 
 def test_login_missing_fields(client):
     response = client.post("/auth/login", json={"password": "P@ssw0rd"})
     assert response.status_code == 400
     assert response.json["error"] == "Email and password are required."
+
+
+def test_forgot_password_uses_generic_response_for_unknown_email(client):
+    response = client.post(
+        "/auth/forgot-password", data={"email": "unknown@example.com"}
+    )
+
+    assert response.status_code == 200
+    assert b"If that account can be recovered with security questions" in response.data
+    assert b"No account found" not in response.data
+
+    with client.session_transaction() as session:
+        assert "pw_reset_user_id" not in session
+        assert "pw_reset_verified" not in session
+
+
+def test_forgot_password_redirects_recoverable_user_to_questions(client):
+    client.post("/auth/signup", json=_signup_payload("recover@example.com"))
+    client.get("/auth/logout")
+
+    response = client.post(
+        "/auth/forgot-password", data={"email": "recover@example.com"}
+    )
+
+    assert response.status_code == 302
+    assert "/auth/verify-security-questions" in response.headers["Location"]
+
+    verify_response = client.get(response.headers["Location"])
+    assert verify_response.status_code == 200
+    assert b"What city were you born in?" in verify_response.data
+    assert b"What is your first school" in verify_response.data
+
+
+def test_security_answers_allow_password_reset(client):
+    client.post(
+        "/auth/signup",
+        json=_signup_payload("recover@example.com", "OldPass123"),
+    )
+    client.get("/auth/logout")
+    client.post("/auth/forgot-password", data={"email": "recover@example.com"})
+
+    verify_response = client.post(
+        "/auth/verify-security-questions",
+        data={"security_answer_1": "Mumbai", "security_answer_2": "Central"},
+    )
+    assert verify_response.status_code == 302
+    assert "/auth/reset-password" in verify_response.headers["Location"]
+
+    reset_response = client.post(
+        "/auth/reset-password",
+        data={"password": "NewPass123", "confirm_password": "Mismatch123"},
+    )
+    assert reset_response.status_code == 200
+    assert b"Passwords do not match." in reset_response.data
+
+    success_response = client.post(
+        "/auth/reset-password",
+        data={"password": "NewPass123", "confirm_password": "NewPass123"},
+    )
+    assert success_response.status_code == 302
+    assert "/auth/login" in success_response.headers["Location"]
+
+    with client.session_transaction() as session:
+        assert "pw_reset_user_id" not in session
+        assert "pw_reset_verified" not in session
+
+    login_response = client.post(
+        "/auth/login", json={"email": "recover@example.com", "password": "NewPass123"}
+    )
+    assert login_response.status_code == 200
+
+
+def test_security_answer_failures_lock_after_five_attempts(client, app):
+    client.post("/auth/signup", json=_signup_payload("locked@example.com"))
+    client.get("/auth/logout")
+    client.post("/auth/forgot-password", data={"email": "locked@example.com"})
+
+    for _ in range(5):
+        response = client.post(
+            "/auth/verify-security-questions",
+            data={"security_answer_1": "wrong", "security_answer_2": "wrong"},
+        )
+
+    assert response.status_code == 200
+    assert b"Too many failed attempts" in response.data
+
+    with app.app_context():
+        user = User.query.filter_by(email="locked@example.com").first()
+        assert user.security_failed_attempts == 5
+        assert user.security_locked_until is not None
+
+    locked_response = client.get("/auth/verify-security-questions")
+    assert locked_response.status_code == 200
+    assert b"Try again in" in locked_response.data
+
+
+def test_user_without_questions_cannot_reach_blank_question_page(client, app):
+    with app.app_context():
+        user = User(email="legacy@example.com", password_hash=hash_password("Pass1234"))
+        db.session.add(user)
+        db.session.commit()
+        user_id = user.id
+
+    forgot_response = client.post(
+        "/auth/forgot-password", data={"email": "legacy@example.com"}
+    )
+    assert forgot_response.status_code == 200
+    assert b"If that account can be recovered with security questions" in forgot_response.data
+
+    with client.session_transaction() as session:
+        assert "pw_reset_user_id" not in session
+        session["pw_reset_user_id"] = user_id
+
+    verify_response = client.get("/auth/verify-security-questions")
+    assert verify_response.status_code == 302
+    assert "/auth/forgot-password" in verify_response.headers["Location"]
 
 
 def test_dashboard_requires_login(client):
@@ -57,7 +195,7 @@ def test_dashboard_requires_login(client):
 
 def test_logout_clears_session(client):
     client.post(
-        "/auth/signup", json={"email": "vivek@example.com", "password": "P@ssw0rd"}
+        "/auth/signup", json=_signup_payload("vivek@example.com", "P@ssw0rd")
     )
     logout_response = client.get("/auth/logout")
     assert logout_response.status_code == 302
@@ -156,7 +294,7 @@ def test_gmail_connect_redirects_with_gmail_scopes(client, monkeypatch):
         "GOOGLE_GMAIL_REDIRECT_URI", "http://localhost:5000/auth/gmail/callback"
     )
     client.post(
-        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+        "/auth/signup", json=_signup_payload()
     )
 
     response = client.get("/auth/gmail/connect?next=settings")
@@ -175,7 +313,7 @@ def test_gmail_connect_redirects_with_gmail_scopes(client, monkeypatch):
 
 def test_gmail_callback_rejects_invalid_state_without_logging_out(client):
     client.post(
-        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+        "/auth/signup", json=_signup_payload()
     )
     with client.session_transaction() as session:
         session["gmail_oauth_state"] = "expected-state"
@@ -208,7 +346,7 @@ def test_gmail_callback_stores_token(client, monkeypatch, app):
         "src.web.auth_routes.handle_gmail_callback", fake_handle_gmail_callback
     )
     client.post(
-        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+        "/auth/signup", json=_signup_payload()
     )
     with client.session_transaction() as session:
         session["gmail_oauth_state"] = "expected-state"
@@ -244,7 +382,7 @@ def test_gmail_reconnect_preserves_existing_refresh_token(client, monkeypatch, a
         "src.web.auth_routes.handle_gmail_callback", fake_handle_gmail_callback
     )
     client.post(
-        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+        "/auth/signup", json=_signup_payload()
     )
 
     with app.app_context():
@@ -286,7 +424,7 @@ def test_disconnect_gmail_requires_login(client):
 
 def test_disconnect_gmail_removes_token(client, app):
     client.post(
-        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+        "/auth/signup", json=_signup_payload()
     )
 
     with app.app_context():
@@ -316,7 +454,7 @@ def test_disconnect_gmail_removes_token(client, app):
 
 def test_settings_page_shows_gmail_connection_state(client, app):
     client.post(
-        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+        "/auth/signup", json=_signup_payload()
     )
 
     disconnected_response = client.get("/auth/settings", follow_redirects=True)
@@ -342,7 +480,7 @@ def test_settings_page_shows_gmail_connection_state(client, app):
 
 def test_settings_route_redirects_to_dashboard_settings(client):
     client.post(
-        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+        "/auth/signup", json=_signup_payload()
     )
 
     response = client.get("/auth/settings")
@@ -353,7 +491,7 @@ def test_settings_route_redirects_to_dashboard_settings(client):
 
 def test_dashboard_contains_inbox_and_settings_bootstrap_state(client):
     client.post(
-        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+        "/auth/signup", json=_signup_payload()
     )
 
     response = client.get("/auth/dashboard?page=settings&tab=channels")
@@ -389,7 +527,7 @@ def test_message_view_requires_login(client):
 
 def test_message_view_renders_placeholder_content(client):
     client.post(
-        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+        "/auth/signup", json=_signup_payload()
     )
 
     response = client.get(
@@ -428,7 +566,7 @@ def test_message_view_renders_placeholder_content(client):
 
 def test_privacy_preferences_can_disable_and_enable_ai_data_usage(client, app):
     client.post(
-        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+        "/auth/signup", json=_signup_payload()
     )
 
     disabled_response = client.post("/auth/update-privacy-preferences", data={})
@@ -460,3 +598,4 @@ def test_privacy_preferences_can_disable_and_enable_ai_data_usage(client, app):
 
     enabled_page = client.get("/auth/dashboard?page=settings&tab=security")
     assert b'name="ai_data_usage_enabled" checked' in enabled_page.data
+

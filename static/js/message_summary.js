@@ -14,7 +14,8 @@
     const data = el.dataset || {};
     let preferredLanguage = "English";
     try {
-      preferredLanguage = localStorage.getItem("preferred_language") || "English";
+      preferredLanguage =
+        localStorage.getItem("preferred_language") || "English";
     } catch {}
     return JSON.stringify({
       url: data.summaryUrl || "/nlp/summarize",

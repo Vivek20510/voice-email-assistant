@@ -25,7 +25,16 @@
 
       <button
         class="read-aloud-btn"
-        onclick="EmailReadAloud.play({ button: this, summaryElement: this.closest('.summary-card').querySelector('.summary-text'), bodyElement: document.querySelector('#page-voicemail .msg-body-content') })"
+        onclick="
+          EmailReadAloud.play({
+            button: this,
+            summaryElement:
+              this.closest('.summary-card').querySelector('.summary-text'),
+            bodyElement: document.querySelector(
+              '#page-voicemail .msg-body-content',
+            ),
+          })
+        "
       >
         ▶ Read aloud
       </button>
@@ -334,7 +343,10 @@ recent_messages|default([message]) %}
             {% endfor %}
           </div>
 
-          <div id="suggestions-generate-wrap" class="message-detail-suggestions-generate">
+          <div
+            id="suggestions-generate-wrap"
+            class="message-detail-suggestions-generate"
+          >
             <button
               id="generate-replies-btn"
               type="button"

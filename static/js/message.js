@@ -1,13 +1,12 @@
-
 /**
-* message.js — Message View
-* Handles single-message rendering, mini sidebar, iframe, and back navigation.
-* Depends on: dashboard.js (state + helpers), ai.js (generateSummary, handleReadAloud)
-*/
+ * message.js — Message View
+ * Handles single-message rendering, mini sidebar, iframe, and back navigation.
+ * Depends on: dashboard.js (state + helpers), ai.js (generateSummary, handleReadAloud)
+ */
 
 // ── Iframe Helpers ────────────────────────────────────────────────────────────
 function buildEmailHtmlDocument(bodyHtml) {
- return `<!doctype html>
+  return `<!doctype html>
 <html>
 <head>
  <base target="_blank">
@@ -25,75 +24,85 @@ function buildEmailHtmlDocument(bodyHtml) {
 }
 
 function resizeMessageFrame(frame) {
- if (!frame) return;
- try {
-   const doc = frame.contentDocument || frame.contentWindow?.document;
-   const root = doc?.documentElement;
-   const body = doc?.body;
-   const contentHeight = Math.max(
-     root?.scrollHeight || 0,
-     root?.offsetHeight || 0,
-     body?.scrollHeight || 0,
-     body?.offsetHeight || 0
-   );
-   if (contentHeight > 0) frame.style.height = `${Math.max(contentHeight + 24, 420)}px`;
- } catch {
-   frame.style.height = "70vh";
- }
+  if (!frame) return;
+  try {
+    const doc = frame.contentDocument || frame.contentWindow?.document;
+    const root = doc?.documentElement;
+    const body = doc?.body;
+    const contentHeight = Math.max(
+      root?.scrollHeight || 0,
+      root?.offsetHeight || 0,
+      body?.scrollHeight || 0,
+      body?.offsetHeight || 0,
+    );
+    if (contentHeight > 0)
+      frame.style.height = `${Math.max(contentHeight + 24, 420)}px`;
+  } catch {
+    frame.style.height = "70vh";
+  }
 }
 
 // ── Formatting ────────────────────────────────────────────────────────────────
 function formatTimestamp(value) {
- if (!value) return "Unknown time";
- const parsed = new Date(value);
- if (Number.isNaN(parsed.getTime())) return value;
- return parsed.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  if (!value) return "Unknown time";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 function formatPlainMessageBody(bodyText) {
- const text = String(bodyText || "").trim();
- if (!text) return "";
- return text
-   .split(/\n{2,}/)
-   .map((p) => `<p>${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
-   .join("");
+  const text = String(bodyText || "").trim();
+  if (!text) return "";
+  return text
+    .split(/\n{2,}/)
+    .map((p) => `<p>${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)
+    .join("");
 }
 
 function extractOriginalEmail(text) {
- if (!text) return "";
- let cleaned = String(text);
- const splitMarkers = [
-   /^From:.*$/im,
-   /^Sent:.*$/im,
-   /^To:.*$/im,
-   /^Subject:.*$/im,
-   /^On .* wrote:$/im,
-   /^---+$/m,
- ];
- for (const marker of splitMarkers) cleaned = cleaned.split(marker)[0];
- return cleaned.trim();
+  if (!text) return "";
+  let cleaned = String(text);
+  const splitMarkers = [
+    /^From:.*$/im,
+    /^Sent:.*$/im,
+    /^To:.*$/im,
+    /^Subject:.*$/im,
+    /^On .* wrote:$/im,
+    /^---+$/m,
+  ];
+  for (const marker of splitMarkers) cleaned = cleaned.split(marker)[0];
+  return cleaned.trim();
 }
 
 // ── Mini Sidebar ──────────────────────────────────────────────────────────────
 function getMessageNavigationItems(activeMessage) {
- const channel = channelForView(currentDashboardView);
- const cachedMessages = inboxMessagesCacheByChannel[channel] || inboxMessagesCache || [];
- const items = cachedMessages.slice(0, 25);
- const hasActive = items.some((i) => String(i.id) === String(activeMessage.id));
- return hasActive ? items : [activeMessage, ...items].slice(0, 25);
+  const channel = channelForView(currentDashboardView);
+  const cachedMessages =
+    inboxMessagesCacheByChannel[channel] || inboxMessagesCache || [];
+  const items = cachedMessages.slice(0, 25);
+  const hasActive = items.some(
+    (i) => String(i.id) === String(activeMessage.id),
+  );
+  return hasActive ? items : [activeMessage, ...items].slice(0, 25);
 }
 
 function renderMessageMiniSidebar(activeMessage) {
- const messages = getMessageNavigationItems(activeMessage);
+  const messages = getMessageNavigationItems(activeMessage);
 
- const rows = messages.map((item) => {
-   const sender = item.sender || item.sender_email || "Unknown sender";
-   const subject = item.subject || "(No subject)";
-   const snippet = item.snippet || item.body_text || "No preview available.";
-   const isActive = String(item.id) === String(activeMessage.id);
-   const unreadClass = item.unread ? " is-unread" : "";
+  const rows = messages
+    .map((item) => {
+      const sender = item.sender || item.sender_email || "Unknown sender";
+      const subject = item.subject || "(No subject)";
+      const snippet = item.snippet || item.body_text || "No preview available.";
+      const isActive = String(item.id) === String(activeMessage.id);
+      const unreadClass = item.unread ? " is-unread" : "";
 
-   return `
+      return `
      <button type="button"
        class="message-mini-item${isActive ? " active" : ""}${unreadClass}"
        data-message-id="${escapeHtml(item.id)}"
@@ -108,9 +117,10 @@ function renderMessageMiniSidebar(activeMessage) {
          <span class="message-mini-snippet">${escapeHtml(toPreviewText(snippet))}</span>
        </span>
      </button>`;
- }).join("");
+    })
+    .join("");
 
- return `
+  return `
    <aside class="message-mini-sidebar">
      <div class="message-mini-header">
        <span>Messages</span>
@@ -121,23 +131,25 @@ function renderMessageMiniSidebar(activeMessage) {
 }
 
 function scrollActiveMiniMessageIntoViewIfNeeded() {
- const activeItem = document.querySelector(".message-mini-item.active");
- const miniList = document.querySelector(".message-mini-list");
- if (!activeItem || !miniList) return;
+  const activeItem = document.querySelector(".message-mini-item.active");
+  const miniList = document.querySelector(".message-mini-list");
+  if (!activeItem || !miniList) return;
 
- const itemRect = activeItem.getBoundingClientRect();
- const listRect = miniList.getBoundingClientRect();
- if (itemRect.top < listRect.top || itemRect.bottom > listRect.bottom) {
-   activeItem.scrollIntoView({ behavior: "auto", block: "nearest" });
- }
+  const itemRect = activeItem.getBoundingClientRect();
+  const listRect = miniList.getBoundingClientRect();
+  if (itemRect.top < listRect.top || itemRect.bottom > listRect.bottom) {
+    activeItem.scrollIntoView({ behavior: "auto", block: "nearest" });
+  }
 }
 
 // ── Loading / Error States ────────────────────────────────────────────────────
 function renderMessageLoading(activeMessage = null) {
- setDashboardMessageMode(true);
- const miniSidebar = activeMessage ? renderMessageMiniSidebar(activeMessage) : "";
+  setDashboardMessageMode(true);
+  const miniSidebar = activeMessage
+    ? renderMessageMiniSidebar(activeMessage)
+    : "";
 
- setInboxContent(`
+  setInboxContent(`
    <section class="message-view-page message-view-page-inline">
      <div class="message-view-wrap message-view-wrap-inline">
        <div class="message-detail-topbar message-detail-topbar-inline">
@@ -156,12 +168,12 @@ function renderMessageLoading(activeMessage = null) {
      </div>
    </section>
  `);
- restoreMiniMessageListScroll();
+  restoreMiniMessageListScroll();
 }
 
 function renderMessageError(message) {
- setDashboardMessageMode(true);
- setInboxContent(`
+  setDashboardMessageMode(true);
+  setInboxContent(`
    <div class="inbox-feedback" data-state="error">
      <h3>Could not load message</h3>
      <p>${escapeHtml(message || "Something went wrong while loading this email.")}</p>
@@ -174,26 +186,26 @@ function renderMessageError(message) {
 
 // ── Full Message View ─────────────────────────────────────────────────────────
 function renderMessageView(message) {
- setDashboardMessageMode(true);
- rememberMiniMessageListScroll();
+  setDashboardMessageMode(true);
+  rememberMiniMessageListScroll();
 
- const sender = message.sender || message.sender_email || "Unknown sender";
- const subject = message.subject || "(No subject)";
- const bodyHtml = message.body_html || "";
- const bodyText = message.body_text || "";
+  const sender = message.sender || message.sender_email || "Unknown sender";
+  const subject = message.subject || "(No subject)";
+  const bodyHtml = message.body_html || "";
+  const bodyText = message.body_text || "";
 
- const safeBody = bodyHtml
-   ? `<iframe id="message-html-frame" class="message-html-frame" title="Email message body" sandbox="allow-same-origin" referrerpolicy="no-referrer"></iframe>`
-   : formatPlainMessageBody(bodyText) || "<p>No message body available.</p>";
+  const safeBody = bodyHtml
+    ? `<iframe id="message-html-frame" class="message-html-frame" title="Email message body" sandbox="allow-same-origin" referrerpolicy="no-referrer"></iframe>`
+    : formatPlainMessageBody(bodyText) || "<p>No message body available.</p>";
 
- const suggestionMarkup = `
+  const suggestionMarkup = `
    <div id="suggestions-generate-wrap" style="text-align:center; padding: 12px 0;">
      <button type="button" id="generate-replies-btn" class="action-btn primary" style="padding: 8px 20px; font-size: 14px;">
        ✦ Generate Replies
      </button>
    </div>`;
 
- setInboxContent(`
+  setInboxContent(`
    <section class="message-view-page message-view-page-inline" data-message-id="${escapeHtml(message.id)}">
      <div class="message-view-wrap message-view-wrap-inline">
        <div class="message-detail-topbar message-detail-topbar-inline">
@@ -262,55 +274,61 @@ function renderMessageView(message) {
    </section>
  `);
 
- restoreMiniMessageListScroll();
+  restoreMiniMessageListScroll();
 
- // ── iframe init ──
- const frame = document.getElementById("message-html-frame");
- if (frame) {
-   frame.addEventListener("load", () => resizeMessageFrame(frame), { once: true });
-   frame.srcdoc = buildEmailHtmlDocument(bodyHtml);
-   setTimeout(() => resizeMessageFrame(frame), 300);
-   setTimeout(() => resizeMessageFrame(frame), 1000);
- }
+  // ── iframe init ──
+  const frame = document.getElementById("message-html-frame");
+  if (frame) {
+    frame.addEventListener("load", () => resizeMessageFrame(frame), {
+      once: true,
+    });
+    frame.srcdoc = buildEmailHtmlDocument(bodyHtml);
+    setTimeout(() => resizeMessageFrame(frame), 300);
+    setTimeout(() => resizeMessageFrame(frame), 1000);
+  }
 
- // ── Scroll mini list ──
- setTimeout(() => scrollActiveMiniMessageIntoViewIfNeeded(), 50);
+  // ── Scroll mini list ──
+  setTimeout(() => scrollActiveMiniMessageIntoViewIfNeeded(), 50);
 
- // ── Wire AI buttons (defined in ai.js) ──
- setTimeout(() => {
-   const summarizeBtn = document.getElementById("summarize-btn");
-   if (summarizeBtn) summarizeBtn.addEventListener("click", () => generateSummary());
+  // ── Wire AI buttons (defined in ai.js) ──
+  setTimeout(() => {
+    const summarizeBtn = document.getElementById("summarize-btn");
+    if (summarizeBtn)
+      summarizeBtn.addEventListener("click", () => generateSummary());
 
-   const readBtn = document.getElementById("read-aloud-btn");
-   if (readBtn) readBtn.onclick = handleReadAloud;
+    const readBtn = document.getElementById("read-aloud-btn");
+    if (readBtn) readBtn.onclick = handleReadAloud;
 
-   bindGenerateRepliesButton(message);
- }, 0);
+    bindGenerateRepliesButton(message);
+  }, 0);
 }
 
 // ── Fetch & Load ──────────────────────────────────────────────────────────────
 async function loadMessageDetail(messageId) {
- rememberMiniMessageListScroll();
- currentMessageId = messageId;
- markMessageRead(messageId);
- renderMessageLoading(findCachedMessage(messageId));
+  rememberMiniMessageListScroll();
+  currentMessageId = messageId;
+  markMessageRead(messageId);
+  renderMessageLoading(findCachedMessage(messageId));
 
- try {
-   const response = await fetch(
-     `/api/messages/${encodeURIComponent(messageId)}`,
-     { headers: { Accept: "application/json" }, credentials: "same-origin" }
-   );
+  try {
+    const response = await fetch(
+      `/api/messages/${encodeURIComponent(messageId)}`,
+      { headers: { Accept: "application/json" }, credentials: "same-origin" },
+    );
 
-   let payload = {};
-   try { payload = await response.json(); } catch { payload = {}; }
+    let payload = {};
+    try {
+      payload = await response.json();
+    } catch {
+      payload = {};
+    }
 
-   if (!response.ok) {
-     renderMessageError(payload.error || "Unable to load this message.");
-     return;
-   }
-   renderMessageView(payload);
- } catch {
-   renderMessageError("Network error while loading this message.");
- }
+    if (!response.ok) {
+      renderMessageError(payload.error || "Unable to load this message.");
+      return;
+    }
+    renderMessageView(payload);
+  } catch {
+    renderMessageError("Network error while loading this message.");
+  }
 }
-

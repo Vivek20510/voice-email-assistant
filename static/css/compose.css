@@ -1,611 +1,616 @@
 #page-compose {
-    flex: 1;
-    min-height: 0;
-    background: #fbfbfc;
-    overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  background: #fbfbfc;
+  overflow-y: auto;
 }
 
 .compose-page {
-    width: 100%;
-    min-height: 100%;
-    padding: 26px 28px 34px;
-    display: flex;
-    flex-direction: column;
-    gap: 22px;
-    color: #111827;
+  width: 100%;
+  min-height: 100%;
+  padding: 26px 28px 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  color: #111827;
 }
 
 /* Wrapper */
 .compose-wrap {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 28px;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 28px;
 }
 
 /* Top Bar */
 .compose-title-bar {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 22px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
 }
 
 .compose-header {
-    display: flex;
-    align-items: center;
-    gap: 18px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
 }
 
 .compose-header h1 {
-    font-size: 24px;
-    line-height: 1.2;
-    font-weight: 700;
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 700;
 }
 
 .compose-title-bar h2 {
-    font-size: 24px;
-    font-weight: 700;
-    color: #111;
+  font-size: 24px;
+  font-weight: 700;
+  color: #111;
 }
 
 .compose-back-btn {
-    width: 24px;
-    height: 24px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 0;
-    background: transparent;
-    color: #111827;
-    font-size: 23px;
-    line-height: 1;
-    cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: #111827;
+  font-size: 23px;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .compose-channel {
-    width: 220px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .compose-select-wrap,
 .compose-schedule {
-    position: relative;
-    display: flex;
-    align-items: center;
-    min-height: 48px;
-    background: #ffffff;
-    border: 1px solid #dde1e8;
-    border-radius: 8px;
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  background: #ffffff;
+  border: 1px solid #dde1e8;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
 }
 
 .compose-select-wrap {
-    width: 100%;
+  width: 100%;
 }
 
 .compose-select,
 .compose-schedule-select {
-    width: 100%;
-    appearance: none;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    color: #111827;
-    cursor: pointer;
-    font: inherit;
-    font-size: 14px;
-    font-weight: 600;
+  width: 100%;
+  appearance: none;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #111827;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .compose-select {
-    height: 46px;
-    padding: 0 38px 0 44px;
+  height: 46px;
+  padding: 0 38px 0 44px;
 }
 
 .compose-select-icon,
-.compose-schedule>svg:first-child {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-    stroke: #1639ff;
-    stroke-width: 2;
-    fill: none;
+.compose-schedule > svg:first-child {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  stroke: #1639ff;
+  stroke-width: 2;
+  fill: none;
 }
 
 .compose-select-icon {
-    position: absolute;
-    left: 14px;
+  position: absolute;
+  left: 14px;
 }
 
 .compose-caret {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-    stroke: #111827;
-    stroke-width: 2.2;
-    fill: none;
-    pointer-events: none;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  stroke: #111827;
+  stroke-width: 2.2;
+  fill: none;
+  pointer-events: none;
 }
 
 .compose-caret,
 .compose-select-icon {
-    pointer-events: none;
+  pointer-events: none;
 }
 
-.compose-select-wrap>.compose-caret {
-    position: absolute;
-    right: 14px;
+.compose-select-wrap > .compose-caret {
+  position: absolute;
+  right: 14px;
 }
 
 /* Back Button */
 .back-btn {
-    padding: 8px 14px;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    background: #fff;
-    cursor: pointer;
-    font-size: 14px;
+  padding: 8px 14px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
 }
 
 .back-btn:hover {
-    background: #f3f3f3;
+  background: #f3f3f3;
 }
 
 /* Card */
 .compose-card {
-    width: 100%;
-    flex: 1;
-    min-height: 410px;
-    display: flex;
-    flex-direction: column;
-    gap: 22px;
-    background: #ffffff;
-    border: 1px solid #dfe3ea;
-    border-radius: 8px;
-    padding: 22px;
-    box-shadow: none;
+  width: 100%;
+  flex: 1;
+  min-height: 410px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  background: #ffffff;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  padding: 22px;
+  box-shadow: none;
 }
 
 /* Title */
 .compose-card-title {
-    font-size: 18px;
-    font-weight: 700;
-    margin-bottom: 20px;
-    color: #111;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: #111;
 }
 
 /* Fields */
 .cfield {
-    margin-bottom: 18px;
+  margin-bottom: 18px;
 }
 
 .cfield-label {
-    display: block;
-    font-size: 13px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: #555;
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #555;
 }
 
 .compose-field {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .compose-field-label {
-    color: #111827;
-    font-size: 11px;
-    font-weight: 700;
+  color: #111827;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .compose-input,
 .compose-textarea {
-    width: 100%;
-    border: 1px solid #dfe3ea;
-    border-radius: 8px;
-    background: #ffffff;
-    color: #111827;
-    font: inherit;
-    font-size: 14px;
-    outline: none;
-    transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .summary-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .cfield-input,
 .cfield-textarea {
-    width: 100%;
-    padding: 12px 14px;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    font-size: 14px;
-    outline: none;
-    background: #fff;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  background: #fff;
 }
 
 .cfield-input:focus,
 .cfield-textarea:focus {
-    border-color: #111;
+  border-color: #111;
 }
 
 .cfield-textarea {
-    min-height: 180px;
-    resize: vertical;
-    line-height: 1.6;
+  min-height: 180px;
+  resize: vertical;
+  line-height: 1.6;
 }
 
 /* Footer */
 .compose-footer {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 10px;
-    margin-bottom: 22px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  margin-bottom: 22px;
 }
 
 .char-counter {
-    margin-right: auto;
-    font-size: 12px;
-    color: #777;
+  margin-right: auto;
+  font-size: 12px;
+  color: #777;
 }
 
 .ftr-btn {
-    padding: 8px 14px;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    background: #fff;
-    cursor: pointer;
-    font-size: 13px;
+  padding: 8px 14px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
 }
 
 .ftr-btn:hover {
-    background: #f3f3f3;
+  background: #f3f3f3;
 }
 
 /* Bottom Grid */
 .send-opts-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 18px;
-    border-top: 1px solid #eee;
-    padding-top: 22px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  border-top: 1px solid #eee;
+  padding-top: 22px;
 }
 
 .send-opt {
-    background: #fafafa;
-    border: 1px solid #eee;
-    border-radius: 14px;
-    padding: 16px;
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 14px;
+  padding: 16px;
 }
 
 .send-opt h4 {
-    font-size: 15px;
-    margin-bottom: 6px;
-    color: #111;
+  font-size: 15px;
+  margin-bottom: 6px;
+  color: #111;
 }
 
 .send-opt p {
-    font-size: 12px;
-    color: #777;
-    margin-bottom: 14px;
+  font-size: 12px;
+  color: #777;
+  margin-bottom: 14px;
 }
 
 .send-opt-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 /* Select */
 .cselect {
-    padding: 10px 12px;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    font-size: 13px;
-    background: #fff;
-    outline: none;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 13px;
+  background: #fff;
+  outline: none;
 }
 
 /* Buttons */
 .btn-send {
-    padding: 11px;
-    border: none;
-    background: #111;
-    color: #fff;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
+  padding: 11px;
+  border: none;
+  background: #111;
+  color: #fff;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .btn-send:hover {
-    background: #333;
+  background: #333;
 }
 
 .btn-draft {
-    padding: 11px;
-    border: 1px solid #ddd;
-    background: #fff;
-    color: #111;
-    border-radius: 10px;
-    font-size: 14px;
-    cursor: pointer;
+  padding: 11px;
+  border: 1px solid #ddd;
+  background: #fff;
+  color: #111;
+  border-radius: 10px;
+  font-size: 14px;
+  cursor: pointer;
 }
 
 .btn-draft:hover {
-    background: #f3f3f3;
+  background: #f3f3f3;
 }
 
 /* Responsive */
 @media (max-width: 900px) {
-    .send-opts-grid {
-        grid-template-columns: 1fr;
-    }
+  .send-opts-grid {
+    grid-template-columns: 1fr;
+  }
 
-    .compose-wrap {
-        padding: 18px;
-    }
+  .compose-wrap {
+    padding: 18px;
+  }
 
-    .compose-card {
-        padding: 20px;
-    }
+  .compose-card {
+    padding: 20px;
+  }
 }
 
 .compose-input {
-    height: 42px;
-    padding: 0 14px;
+  height: 42px;
+  padding: 0 14px;
 }
 
 .compose-textarea {
-    flex: 1;
-    min-height: 250px;
-    padding: 14px;
-    resize: none;
-    line-height: 1.55;
+  flex: 1;
+  min-height: 250px;
+  padding: 14px;
+  resize: none;
+  line-height: 1.55;
 }
 
 .compose-input::placeholder,
 .compose-textarea::placeholder {
-    color: #667085;
+  color: #667085;
 }
 
 .compose-input:focus,
 .compose-textarea:focus,
 .compose-select-wrap:focus-within,
 .compose-schedule:focus-within {
-    border-color: #8da2ff;
-    box-shadow: 0 0 0 3px rgba(22, 57, 255, 0.08);
+  border-color: #8da2ff;
+  box-shadow: 0 0 0 3px rgba(22, 57, 255, 0.08);
 }
 
 .compose-message-field {
-    flex: 1;
-    min-height: 0;
+  flex: 1;
+  min-height: 0;
 }
 
 .compose-card-footer {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 0 4px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 4px;
 }
 
 .compose-count {
-    margin-right: auto;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: #667085;
-    font-size: 14px;
-    font-variant-numeric: tabular-nums;
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #667085;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
 }
 
 .compose-tools,
 .compose-final-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .compose-soft-btn,
 .compose-draft-btn,
 .compose-send-btn {
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    border-radius: 8px;
-    font: inherit;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: transform 0.15s, background 0.15s, border-color 0.15s;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    background 0.15s,
+    border-color 0.15s;
 }
 
 .compose-soft-btn,
 .compose-draft-btn {
-    border: 1px solid #dfe3ea;
-    background: #ffffff;
-    color: #344054;
+  border: 1px solid #dfe3ea;
+  background: #ffffff;
+  color: #344054;
 }
 
 .compose-soft-btn {
-    padding: 0 18px;
+  padding: 0 18px;
 }
 
 .compose-draft-btn {
-    min-width: 184px;
-    padding: 0 24px;
+  min-width: 184px;
+  padding: 0 24px;
 }
 
 .compose-send-btn {
-    min-width: 146px;
-    padding: 0 24px;
-    border: 1px solid #1639ff;
-    background: #1639ff;
-    color: #ffffff;
-    font-weight: 600;
+  min-width: 146px;
+  padding: 0 24px;
+  border: 1px solid #1639ff;
+  background: #1639ff;
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .compose-soft-btn:hover,
 .compose-draft-btn:hover {
-    background: #f8f9fc;
-    border-color: #c9d0dc;
+  background: #f8f9fc;
+  border-color: #c9d0dc;
 }
 
 .compose-send-btn:hover {
-    background: #0f2ed3;
-    border-color: #0f2ed3;
+  background: #0f2ed3;
+  border-color: #0f2ed3;
 }
 
 .compose-soft-btn:active,
 .compose-draft-btn:active,
 .compose-send-btn:active {
-    transform: translateY(1px);
+  transform: translateY(1px);
 }
 
 .compose-soft-btn svg,
 .compose-draft-btn svg,
 .compose-send-btn svg {
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .compose-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
 }
 
 .compose-schedule {
-    width: 244px;
-    padding: 0 14px;
-    gap: 12px;
-    cursor: pointer;
+  width: 244px;
+  padding: 0 14px;
+  gap: 12px;
+  cursor: pointer;
 }
 
 .error-text {
-    color: red;
-    font-size: 12px;
-    margin-top: 4px;
+  color: red;
+  font-size: 12px;
+  margin-top: 4px;
 }
 
 .input-error {
-    border: 1px solid red !important;
+  border: 1px solid red !important;
 }
 
-.compose-schedule>span {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+.compose-schedule > span {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .compose-schedule-label {
-    color: #667085;
-    font-size: 11px;
-    line-height: 1.2;
+  color: #667085;
+  font-size: 11px;
+  line-height: 1.2;
 }
 
 .compose-schedule-select {
-    padding-right: 4px;
-    font-size: 13px;
-    position: relative;
-    z-index: 2;
+  padding-right: 4px;
+  font-size: 13px;
+  position: relative;
+  z-index: 2;
 }
 
 @media (max-width: 900px) {
-    .compose-page {
-        padding: 20px;
-    }
+  .compose-page {
+    padding: 20px;
+  }
 
-    .compose-card {
-        min-height: 420px;
-        padding: 18px;
-    }
+  .compose-card {
+    min-height: 420px;
+    padding: 18px;
+  }
 
-    .compose-actions {
-        align-items: stretch;
-        flex-direction: column;
-    }
+  .compose-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
 
-    .compose-schedule,
-    .compose-final-actions,
-    .compose-draft-btn,
-    .compose-send-btn {
-        width: 100%;
-    }
+  .compose-schedule,
+  .compose-final-actions,
+  .compose-draft-btn,
+  .compose-send-btn {
+    width: 100%;
+  }
 
-    .compose-final-actions {
-        justify-content: stretch;
-    }
+  .compose-final-actions {
+    justify-content: stretch;
+  }
 }
 
 @media (max-width: 640px) {
-    .compose-page {
-        padding: 16px;
-        gap: 16px;
-    }
+  .compose-page {
+    padding: 16px;
+    gap: 16px;
+  }
 
-    .compose-header h1 {
-        font-size: 22px;
-    }
+  .compose-header h1 {
+    font-size: 22px;
+  }
 
-    .compose-channel {
-        width: 100%;
-    }
+  .compose-channel {
+    width: 100%;
+  }
 
-    .compose-card-footer,
-    .compose-tools,
-    .compose-final-actions {
-        align-items: stretch;
-        flex-direction: column;
-    }
+  .compose-card-footer,
+  .compose-tools,
+  .compose-final-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
 
-    .compose-count {
-        width: 100%;
-    }
+  .compose-count {
+    width: 100%;
+  }
 
-    .compose-soft-btn,
-    .compose-draft-btn,
-    .compose-send-btn {
-        width: 100%;
-    }
+  .compose-soft-btn,
+  .compose-draft-btn,
+  .compose-send-btn {
+    width: 100%;
+  }
 }
 
 .attachment-preview {
-    margin-top: 10px;
+  margin-top: 10px;
 }
 
 .attachment-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    background: #f1f3f5;
-    border-radius: 6px;
-    padding: 6px 10px;
-    font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #f1f3f5;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 14px;
 }
 
 .attachment-item button {
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    color: red;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: red;
 }

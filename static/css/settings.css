@@ -439,7 +439,8 @@
 }
 
 /* Inputs */
-.modal-content input {
+.modal-content input,
+.modal-content select {
   width: 100%;
   padding: 10px;
   margin-top: 5px;
@@ -450,7 +451,8 @@
   transition: all 0.2s ease;
 }
 
-.modal-content input:focus {
+.modal-content input:focus,
+.modal-content select:focus {
   outline: none;
   border-color: #4f46e5;
   background: #fff;
@@ -755,6 +757,10 @@
 .modal-actions button {
   margin: 5px;
   padding: 8px 12px;
+}
+
+.security-question-select {
+  width: 100%;
 }
 
 /* ✅ Modal background */

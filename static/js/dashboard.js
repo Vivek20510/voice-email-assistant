@@ -16,6 +16,8 @@ let currentMessageId = null;
 
 let currentDashboardView = "sb-inbox";
 
+let inboxTotalCount = 0;
+
 let miniMessageListScrollTop = 0;
 
 let activeInboxSort = "newest";
@@ -85,14 +87,7 @@ const mailViews = new Set([
 // ── View Helpers ──────────────────────────────────────────────────────────────
 
 function channelForView(viewId) {
-  if (
-    viewId === "sb-outlook" ||
-    viewId === "sb-draft" ||
-    viewId === "sb-sent" ||
-    viewId === "sb-archive" ||
-    viewId === "sb-trash"
-  )
-    return "outlook";
+  if (viewId === "sb-outlook") return "outlook";
 
   if (viewId === "sb-emails") return "gmail";
 
@@ -183,20 +178,20 @@ function restoreMiniMessageListScroll() {
   if (miniList) miniList.scrollTop = miniMessageListScrollTop;
 }
 
-// ── Unread Badge ──────────────────────────────────────────────────────────────
+// ── Inbox Count Badge ─────────────────────────────────────────────────────────
 
-function updateInboxUnreadBadge() {
+function updateInboxUnreadBadge(totalCount = inboxTotalCount) {
   const badge = document.getElementById("inbox-unread-badge");
 
   if (!badge) return;
 
-  const messages = allCachedMessages();
+  inboxTotalCount = Number.isFinite(Number(totalCount))
+    ? Number(totalCount)
+    : 0;
 
-  const unreadCount = messages.filter((m) => m.unread).length;
+  badge.textContent = String(inboxTotalCount);
 
-  badge.textContent = String(unreadCount);
-
-  badge.hidden = unreadCount === 0;
+  badge.hidden = inboxTotalCount === 0;
 }
 
 // ── Outlook Notifications ────────────────────────────────────────────────────
@@ -223,8 +218,7 @@ function renderOutlookNotificationMenu() {
   if (!list) return;
 
   if (!outlookNotificationMessages.length) {
-    list.innerHTML =
-      '<p class="notification-empty">No new Outlook emails.</p>';
+    list.innerHTML = '<p class="notification-empty">No new Outlook emails.</p>';
     return;
   }
 
@@ -267,10 +261,15 @@ function recordOutlookMessages(messages) {
 
   if (newMessages.length) {
     const messagesById = new Map(
-      outlookNotificationMessages.map((message) => [String(message.id), message]),
+      outlookNotificationMessages.map((message) => [
+        String(message.id),
+        message,
+      ]),
     );
 
-    newMessages.forEach((message) => messagesById.set(String(message.id), message));
+    newMessages.forEach((message) =>
+      messagesById.set(String(message.id), message),
+    );
 
     outlookNotificationMessages = Array.from(messagesById.values());
 
@@ -393,17 +392,23 @@ async function refreshOutlookNotifications({ manual = false } = {}) {
 
     if (!refreshResponse.ok) {
       if (manual)
-        showToast(refreshPayload.error || "Unable to refresh Outlook.", "error");
+        showToast(
+          refreshPayload.error || "Unable to refresh Outlook.",
+          "error",
+        );
 
       return false;
     }
 
     await waitForOutlookSync();
 
-    const inboxResponse = await fetch("/api/messages?limit=25&channel=outlook", {
-      headers: { Accept: "application/json" },
-      credentials: "same-origin",
-    });
+    const inboxResponse = await fetch(
+      "/api/messages?limit=25&channel=outlook&folder=inbox",
+      {
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+      },
+    );
 
     let inboxPayload = {};
 
@@ -415,7 +420,10 @@ async function refreshOutlookNotifications({ manual = false } = {}) {
 
     if (!inboxResponse.ok) {
       if (manual)
-        showToast(inboxPayload.error || "Unable to load Outlook messages.", "error");
+        showToast(
+          inboxPayload.error || "Unable to load Outlook messages.",
+          "error",
+        );
 
       return false;
     }
@@ -748,7 +756,8 @@ function sortedMessages(messages, sortType = activeInboxSort) {
 }
 
 function filteredMessages(messages, filterType = activeInboxFilter) {
-  if (filterType === "unread") return messages.filter((message) => message.unread);
+  if (filterType === "unread")
+    return messages.filter((message) => message.unread);
 
   if (filterType === "starred") return messages.filter(isStarredMessage);
 
@@ -1038,11 +1047,13 @@ async function loadInboxMessages() {
 
   const channel = channelForView(currentDashboardView);
 
+  const folder = folderForView(currentDashboardView);
+
   renderInboxLoading();
 
   try {
     const response = await fetch(
-      `/api/messages?limit=25&channel=${encodeURIComponent(channel)}&folder=${encodeURIComponent(currentDashboardView)}`,
+      `/api/messages?limit=25&channel=${encodeURIComponent(channel)}&folder=${encodeURIComponent(folder)}`,
 
       { headers: { Accept: "application/json" }, credentials: "same-origin" },
     );
@@ -1080,7 +1091,11 @@ async function loadInboxMessages() {
 
     recordOutlookMessages(messages);
 
-    updateInboxUnreadBadge();
+    if (currentDashboardView === "sb-inbox") {
+      updateInboxUnreadBadge(
+        payload.total_count ?? payload.count ?? messages.length,
+      );
+    }
 
     if (!mailViews.has(currentDashboardView)) return;
 

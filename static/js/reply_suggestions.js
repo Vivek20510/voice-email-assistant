@@ -68,8 +68,9 @@
       button.addEventListener("click", () => {
         const text = button
           .closest(".suggestion-item")
-          ?.querySelector(".message-detail-suggestion-text, .suggestion-text")
-          ?.textContent;
+          ?.querySelector(
+            ".message-detail-suggestion-text, .suggestion-text",
+          )?.textContent;
         prefillCompose(text);
       });
     });

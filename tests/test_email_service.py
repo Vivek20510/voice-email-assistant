@@ -87,6 +87,40 @@ def test_list_emails_normalizes_gmail_messages(app, monkeypatch):
     assert result["messages"][0]["subject"] == "Hello"
 
 
+def test_list_emails_maps_gmail_folders_to_labels_and_archive_query(
+    app, monkeypatch
+):
+    user_id = _create_connected_user(app)
+    seen = {}
+    current = {"folder": None}
+
+    def fake_request(method, url, headers=None, params=None, json=None, timeout=None):
+        if url.endswith("/messages"):
+            seen[current["folder"]] = dict(params)
+            return DummyResponse(payload={"messages": [], "resultSizeEstimate": 9})
+        raise AssertionError("No message detail should be fetched for an empty list")
+
+    monkeypatch.setattr("src.services.email_service.requests.request", fake_request)
+
+    folder_expectations = {
+        "inbox": {"labelIds": ["INBOX"]},
+        "draft": {"labelIds": ["DRAFT"]},
+        "sent": {"labelIds": ["SENT"]},
+        "trash": {"labelIds": ["TRASH"]},
+        "archive": {"q": email_service.GMAIL_ARCHIVE_QUERY},
+    }
+
+    with app.app_context():
+        for folder in folder_expectations:
+            current["folder"] = folder
+            result = email_service.list_emails(user_id, limit=10, folder=folder)
+            assert result["total_count"] == 9
+
+    for folder, expected in folder_expectations.items():
+        for key, value in expected.items():
+            assert seen[folder][key] == value
+
+
 def test_read_email_handles_multipart_payload(app, monkeypatch):
     user_id = _create_connected_user(app)
 

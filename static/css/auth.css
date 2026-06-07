@@ -466,6 +466,21 @@ form {
     inset 0 1px 3px rgba(45, 52, 118, 0.04);
 }
 
+.form-select {
+  appearance: none;
+  padding-right: 46px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #66708f 50%),
+    linear-gradient(135deg, #66708f 50%, transparent 50%);
+  background-position:
+    calc(100% - 22px) 50%,
+    calc(100% - 16px) 50%;
+  background-size:
+    6px 6px,
+    6px 6px;
+  background-repeat: no-repeat;
+}
+
 .field-icon {
   position: absolute;
   left: 18px;
@@ -658,6 +673,158 @@ form {
 }
 
 .signup-card .btn-primary {
+  margin: 4px 0 0;
+}
+
+.signup-security-block {
+  margin: 22px 0 4px;
+  padding: 18px;
+  border: 1px solid rgba(117, 88, 244, 0.16);
+  border-radius: 16px;
+  background: rgba(248, 249, 255, 0.72);
+}
+
+.signup-security-title {
+  color: var(--auth-ink);
+  font-size: 15px;
+  font-weight: 850;
+}
+
+.signup-security-copy {
+  margin: 5px 0 16px;
+  color: var(--auth-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.signup-security-block .form-input {
+  padding-left: 18px;
+}
+
+.recovery-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background:
+    linear-gradient(
+      120deg,
+      rgba(255, 255, 255, 0.72),
+      rgba(247, 249, 255, 0.88)
+    ),
+    radial-gradient(
+      circle at 20% 18%,
+      rgba(117, 88, 244, 0.12),
+      transparent 30%
+    ),
+    radial-gradient(circle at 82% 76%, rgba(57, 116, 255, 0.1), transparent 32%);
+}
+
+.recovery-panel {
+  width: min(100%, 500px);
+  padding: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 26px 80px rgba(45, 52, 118, 0.14);
+  backdrop-filter: blur(18px);
+}
+
+.recovery-back {
+  display: inline-flex;
+  margin-bottom: 24px;
+  color: #5e42f0;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 760;
+}
+
+.recovery-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  color: var(--auth-ink);
+  font-size: 22px;
+  font-weight: 850;
+}
+
+.recovery-brand .login-brand-mark {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+}
+
+.recovery-brand .login-brand-mark svg {
+  width: 24px;
+  height: 24px;
+}
+
+.recovery-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0 0 28px;
+  padding: 0;
+  list-style: none;
+}
+
+.recovery-steps li {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e1e5f0;
+  border-radius: 10px;
+  color: #68718b;
+  background: rgba(255, 255, 255, 0.76);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.recovery-steps li.active {
+  color: #ffffff;
+  border-color: #111653;
+  background: #111653;
+}
+
+.recovery-steps li.done {
+  color: #23306b;
+  border-color: rgba(117, 88, 244, 0.2);
+  background: rgba(117, 88, 244, 0.1);
+}
+
+.recovery-panel h1 {
+  margin: 0 0 10px;
+  color: var(--auth-ink);
+  font-size: 31px;
+  line-height: 1.14;
+  font-weight: 880;
+}
+
+.recovery-copy {
+  margin: 0 0 24px;
+  color: var(--auth-muted);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.recovery-message {
+  margin: -4px 0 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-radius: 12px;
+  color: #1d4ed8;
+  background: rgba(239, 246, 255, 0.9);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.recovery-input {
+  padding-left: 18px;
+}
+
+.recovery-form .btn-primary {
   margin: 4px 0 0;
 }
 

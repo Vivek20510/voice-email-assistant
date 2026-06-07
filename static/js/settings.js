@@ -287,3 +287,54 @@ function confirmLogout() {
     window.location.href = "/auth/logout";
   }
 }
+
+// ── Security Questions Modal ────────────────────────────────────────────────
+function openSecurityQuestionsModal() {
+  const modal = document.getElementById("securityQuestionsModal");
+  if (modal) modal.style.display = "block";
+}
+
+function closeSecurityQuestionsModal() {
+  const modal = document.getElementById("securityQuestionsModal");
+  if (modal) modal.style.display = "none";
+}
+
+async function saveSecurityQuestions() {
+  const q1 = document.getElementById("security_question_1")?.value.trim() || "";
+  const a1 = document.getElementById("security_answer_1")?.value.trim() || "";
+  const q2 = document.getElementById("security_question_2")?.value.trim() || "";
+  const a2 = document.getElementById("security_answer_2")?.value.trim() || "";
+
+  const hint = document.getElementById("securityQuestionsHint");
+  if (hint) hint.style.display = "none";
+
+  if (!q1 || !q2 || q1 === q2 || a1.length < 3 || a2.length < 3) {
+    if (hint) hint.style.display = "block";
+    return;
+  }
+
+  try {
+    const res = await fetch("/auth/update-security-questions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        security_question_1: q1,
+        security_answer_1: a1,
+        security_question_2: q2,
+        security_answer_2: a2,
+      }),
+    });
+
+    const body = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      showToast(body.error || "Could not save security questions", "error");
+      return;
+    }
+
+    showToast(body.message || "Security questions saved");
+    closeSecurityQuestionsModal();
+  } catch (err) {
+    showToast("Could not save security questions", "error");
+  }
+}

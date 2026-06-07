@@ -4,11 +4,16 @@ import sys
 import time
 from datetime import datetime, timezone
 
+from flask import has_app_context
 from src.db import db
 from src.models import UserToken
 from src.services.email_service import EmailServiceError
 
 OUTLOOK_INBOX_FOLDER = 6
+OUTLOOK_DELETED_ITEMS_FOLDER = 3
+OUTLOOK_SENT_FOLDER = 5
+OUTLOOK_DRAFTS_FOLDER = 16
+OUTLOOK_ARCHIVE_FOLDER = 35
 OUTLOOK_MAIL_ITEM_CLASS = 43
 _OUTLOOK_AVAILABILITY_TTL_SECONDS = 30
 _outlook_availability_cache = {"available": None, "checked_at": 0}
@@ -90,13 +95,14 @@ def refresh_outlook(user_id: int) -> dict:
 def list_emails(
     user_id: int,
     limit: int = 25,
+    folder: str = "inbox",
     sort_by: str = "received_at",
     ascending: bool = False,
 ) -> dict:
     outlook = _require_outlook_namespace()
     _outlook_token_for_user(user_id)
-    inbox = outlook.GetDefaultFolder(OUTLOOK_INBOX_FOLDER)
-    items = inbox.Items
+    outlook_folder = _get_mail_folder(outlook, folder)
+    items = outlook_folder.Items
     items.Sort("[ReceivedTime]", bool(ascending))
 
     messages = []
@@ -110,7 +116,15 @@ def list_emails(
             continue
         messages.append(_list_shape(_normalize_message(item)))
 
-    return {"emails": messages, "messages": messages, "next_page_token": None}
+    return {
+        "emails": messages,
+        "messages": messages,
+        "next_page_token": None,
+        "total_count": int(getattr(items, "Count", len(messages)) or 0),
+        "unread_count": sum(1 for message in messages if message.get("unread")),
+        "folder": _normalize_folder(folder),
+        "channel": "outlook",
+    }
 
 
 def read_email(
@@ -131,10 +145,62 @@ def read_email(
 
 
 def _outlook_token_for_user(user_id: int) -> UserToken:
+    if not has_app_context():
+        raise OutlookNotAvailableError(
+            "Outlook is not installed or not available in the current app context.",
+            503,
+        )
+
     token = UserToken.query.filter_by(user_id=user_id, service="outlook").first()
     if token is None:
         raise OutlookConnectionError("Outlook is not connected for this account.", 409)
     return token
+
+
+def _normalize_folder(folder: str | None) -> str:
+    value = (folder or "inbox").strip().lower()
+    aliases = {
+        "sb-inbox": "inbox",
+        "sb-draft": "draft",
+        "drafts": "draft",
+        "sb-sent": "sent",
+        "sentmail": "sent",
+        "sent-mail": "sent",
+        "sb-archive": "archive",
+        "archives": "archive",
+        "sb-trash": "trash",
+        "deleted": "trash",
+        "deleteditems": "trash",
+        "deleted-items": "trash",
+    }
+    value = aliases.get(value, value)
+    if value not in {"inbox", "draft", "sent", "archive", "trash"}:
+        raise OutlookServiceError("Unsupported Outlook folder.", 400)
+    return value
+
+
+def _folder_id(folder: str | None) -> int:
+    folder = _normalize_folder(folder)
+    return {
+        "inbox": OUTLOOK_INBOX_FOLDER,
+        "draft": OUTLOOK_DRAFTS_FOLDER,
+        "sent": OUTLOOK_SENT_FOLDER,
+        "archive": OUTLOOK_ARCHIVE_FOLDER,
+        "trash": OUTLOOK_DELETED_ITEMS_FOLDER,
+    }[folder]
+
+
+def _get_mail_folder(namespace, folder: str | None):
+    folder = _normalize_folder(folder)
+    try:
+        return namespace.GetDefaultFolder(_folder_id(folder))
+    except Exception as exc:
+        if folder == "archive":
+            raise OutlookConnectionError(
+                "Outlook Archive folder is not available for this profile.",
+                409,
+            ) from exc
+        raise OutlookAPIError(f"Unable to open Outlook {folder} folder.", 503) from exc
 
 
 def _require_outlook_namespace():

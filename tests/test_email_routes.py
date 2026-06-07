@@ -6,7 +6,7 @@ from src.models import User, UserToken
 
 def _signup(client):
     client.post(
-        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123"}
+        "/auth/signup", json={"email": "user@example.com", "password": "SecurePass123", "security_question_1": "What city were you born in?", "security_answer_1": "Mumbai", "security_question_2": "What is your first school?", "security_answer_2": "Central"}
     )
 
 
@@ -67,7 +67,10 @@ def test_email_list_routes_return_live_messages(client, app, monkeypatch):
     _signup(client)
     _attach_gmail_token(app)
 
-    def fake_list_emails(user_id, limit, page_token=None, label_ids=None):
+    def fake_list_emails(
+        user_id, limit, page_token=None, label_ids=None, folder="inbox"
+    ):
+        assert folder == "inbox"
         return {
             "emails": [
                 {
@@ -111,6 +114,85 @@ def test_email_list_routes_return_live_messages(client, app, monkeypatch):
     api_response = client.get("/api/messages?limit=5")
     assert api_response.status_code == 200
     assert api_response.json["messages"][0]["sender"] == "Alice"
+
+
+def test_api_messages_fetches_combined_mail_folder_and_count(client, monkeypatch):
+    _signup(client)
+    calls = []
+
+    def fake_gmail(user_id, limit, page_token=None, label_ids=None, folder="inbox"):
+        calls.append(("gmail", folder))
+        return {
+            "messages": [
+                {
+                    "id": "gmail-sent-1",
+                    "sender": "Gmail Sender",
+                    "subject": "Gmail sent",
+                    "received_at": "2026-04-22T10:00:00+00:00",
+                    "unread": False,
+                    "labels": ["SENT"],
+                    "channel": "gmail",
+                }
+            ],
+            "emails": [],
+            "total_count": 4,
+        }
+
+    def fake_outlook(user_id, limit, folder="inbox"):
+        calls.append(("outlook", folder))
+        return {
+            "messages": [
+                {
+                    "id": "outlook-sent-1",
+                    "sender": "Outlook Sender",
+                    "subject": "Outlook sent",
+                    "received_at": "2026-04-22T11:00:00+00:00",
+                    "unread": True,
+                    "labels": [],
+                    "channel": "outlook",
+                }
+            ],
+            "emails": [],
+            "total_count": 3,
+        }
+
+    monkeypatch.setattr("src.web.email_routes.gmail_list_emails", fake_gmail)
+    monkeypatch.setattr("src.web.email_routes.outlook_list_emails", fake_outlook)
+
+    response = client.get("/api/messages?channel=all&folder=sent&limit=25")
+
+    assert response.status_code == 200
+    assert calls == [("gmail", "sent"), ("outlook", "sent")]
+    assert response.json["folder"] == "sent"
+    assert response.json["channel"] == "all"
+    assert response.json["total_count"] == 7
+    assert response.json["count"] == 2
+    assert response.json["unread_count"] == 1
+    assert [message["id"] for message in response.json["messages"]] == [
+        "outlook-sent-1",
+        "gmail-sent-1",
+    ]
+
+
+def test_api_messages_archive_uses_archive_folder(client, monkeypatch):
+    _signup(client)
+    folders = []
+
+    def fake_gmail(user_id, limit, page_token=None, label_ids=None, folder="inbox"):
+        folders.append(("gmail", folder))
+        return {"messages": [], "emails": [], "total_count": 0}
+
+    def fake_outlook(user_id, limit, folder="inbox"):
+        folders.append(("outlook", folder))
+        return {"messages": [], "emails": [], "total_count": 0}
+
+    monkeypatch.setattr("src.web.email_routes.gmail_list_emails", fake_gmail)
+    monkeypatch.setattr("src.web.email_routes.outlook_list_emails", fake_outlook)
+
+    response = client.get("/api/messages?channel=all&folder=archive")
+
+    assert response.status_code == 200
+    assert folders == [("gmail", "archive"), ("outlook", "archive")]
 
 
 def test_read_routes_return_live_message_detail(client, app, monkeypatch):
@@ -255,3 +337,4 @@ def test_email_routes_retry_after_gmail_401(client, app, monkeypatch):
 
     assert response.status_code == 200
     assert calls["count"] == 2
+

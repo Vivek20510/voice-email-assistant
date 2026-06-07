@@ -125,7 +125,107 @@ def test_outlook_notifications_poll_detect_acknowledge_and_open_messages():
           );
           assert.equal(cached.length, 2);
           assert.ok(fetchCalls.includes("/api/outlook/refresh"));
-          assert.ok(fetchCalls.includes("/api/messages?limit=25&channel=outlook"));
+          assert.ok(fetchCalls.includes("/api/messages?limit=25&channel=outlook&folder=inbox"));
+        })().catch((error) => {
+          console.error(error);
+          process.exit(1);
+        });
+    """)
+
+    result = subprocess.run(
+        ["node", "-e", script],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_mail_sidebar_fetches_combined_normalized_folders():
+    script = textwrap.dedent(r"""
+        const fs = require("fs");
+        const vm = require("vm");
+        const assert = require("assert");
+
+        function makeElement(id) {
+          return {
+            id,
+            hidden: false,
+            innerHTML: "",
+            textContent: "",
+            style: {},
+            dataset: {},
+            classList: { toggle() {}, remove() {} },
+            addEventListener() {},
+            setAttribute() {},
+            closest() { return null; },
+            querySelectorAll() { return []; },
+          };
+        }
+
+        const elements = {
+          "dashboard-body": makeElement("dashboard-body"),
+          "dashboard-ai-panel": makeElement("dashboard-ai-panel"),
+          "dashboard-title": makeElement("dashboard-title"),
+          "dashboard-toolbar-actions": makeElement("dashboard-toolbar-actions"),
+          "dashboard-toolbar": makeElement("dashboard-toolbar"),
+          "inbox-content": makeElement("inbox-content"),
+          "inbox-unread-badge": makeElement("inbox-unread-badge"),
+        };
+
+        const document = {
+          getElementById: (id) => elements[id] || null,
+          addEventListener() {},
+          querySelectorAll: () => [],
+          createElement: () => ({ innerHTML: "", value: "" }),
+        };
+
+        const urls = [];
+        const context = {
+          window: {},
+          document,
+          console,
+          Promise,
+          Map,
+          Set,
+          Array,
+          String,
+          Number,
+          Date,
+          encodeURIComponent,
+          setInterval: () => 1,
+          setTimeout: (handler) => handler(),
+          showToast: () => {},
+          fetch: async (url) => {
+            urls.push(url);
+            return {
+              ok: true,
+              json: async () => ({
+                messages: [],
+                count: 0,
+                total_count: 0,
+                unread_count: 0,
+              }),
+            };
+          },
+        };
+
+        vm.createContext(context);
+        vm.runInContext(fs.readFileSync("static/js/dashboard.js", "utf8"), context);
+
+        (async () => {
+          await vm.runInContext('switchSidebar("sb-draft")', context);
+          await vm.runInContext('switchSidebar("sb-sent")', context);
+          await vm.runInContext('switchSidebar("sb-archive")', context);
+          await vm.runInContext('switchSidebar("sb-trash")', context);
+
+          assert.deepEqual(urls, [
+            "/api/messages?limit=25&channel=all&folder=draft",
+            "/api/messages?limit=25&channel=all&folder=sent",
+            "/api/messages?limit=25&channel=all&folder=archive",
+            "/api/messages?limit=25&channel=all&folder=trash",
+          ]);
         })().catch((error) => {
           console.error(error);
           process.exit(1);

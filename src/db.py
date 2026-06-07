@@ -48,6 +48,32 @@ def _ensure_schema_compatibility():
     inspector = inspect(db.engine)
     tables = inspector.get_table_names()
 
+    if "users" in tables:
+
+        user_columns = {column["name"] for column in inspector.get_columns("users")}
+
+        user_column_definitions = {
+            "security_question_1": "VARCHAR(255)",
+            "security_answer_1_hash": "VARCHAR(255)",
+            "security_question_2": "VARCHAR(255)",
+            "security_answer_2_hash": "VARCHAR(255)",
+            "security_failed_attempts": "INTEGER NOT NULL DEFAULT 0",
+            "security_locked_until": "DATETIME",
+        }
+
+        with db.engine.begin() as connection:
+
+            for column_name, column_type in user_column_definitions.items():
+
+                if column_name not in user_columns:
+
+                    connection.execute(
+                        text(
+                            f"ALTER TABLE users ADD COLUMN "
+                            f"{column_name} {column_type}"
+                        )
+                    )
+
     if "user_preferences" not in tables:
 
         with db.engine.begin() as connection:

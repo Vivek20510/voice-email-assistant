@@ -85,6 +85,34 @@ def _parse_channel(default: str = "all"):
     return (request.args.get("channel") or default).strip().lower()
 
 
+def _parse_folder(default: str = "inbox"):
+
+    value = (request.args.get("folder") or default).strip().lower()
+
+    aliases = {
+        "sb-inbox": "inbox",
+        "sb-draft": "draft",
+        "drafts": "draft",
+        "sb-sent": "sent",
+        "sentmail": "sent",
+        "sent-mail": "sent",
+        "sb-archive": "archive",
+        "archives": "archive",
+        "sb-trash": "trash",
+        "deleted": "trash",
+        "deleteditems": "trash",
+        "deleted-items": "trash",
+    }
+
+    value = aliases.get(value, value)
+
+    if value not in {"inbox", "draft", "sent", "archive", "trash"}:
+
+        raise EmailServiceError("Unsupported message folder.", 400)
+
+    return value
+
+
 def _sort_messages(messages: list[dict]) -> list[dict]:
 
     def sort_key(message):
@@ -98,6 +126,32 @@ def _sort_messages(messages: list[dict]) -> list[dict]:
         return str(value)
 
     return sorted(messages, key=sort_key, reverse=True)
+
+
+def _message_payload(
+    messages: list[dict],
+    *,
+    channel: str,
+    folder: str,
+    next_page_token=None,
+    total_count: int | None = None,
+    unread_count: int | None = None,
+) -> dict:
+
+    return {
+        "emails": messages,
+        "messages": messages,
+        "next_page_token": next_page_token,
+        "count": len(messages),
+        "total_count": len(messages) if total_count is None else int(total_count or 0),
+        "unread_count": (
+            sum(1 for message in messages if message.get("unread"))
+            if unread_count is None
+            else int(unread_count or 0)
+        ),
+        "folder": folder,
+        "channel": channel,
+    }
 
 
 def _message_channel(message: dict, default: str = "gmail") -> str:
@@ -232,6 +286,7 @@ def list_emails():
             limit=_parse_limit(),
             page_token=request.args.get("page_token"),
             label_ids=request.args.getlist("label"),
+            folder=_parse_folder(),
         )
 
     except EmailServiceError as exc:
@@ -278,6 +333,8 @@ def api_list_messages():
 
     try:
 
+        folder = _parse_folder()
+
         if channel == "gmail":
 
             result = gmail_list_emails(
@@ -285,31 +342,42 @@ def api_list_messages():
                 limit=limit,
                 page_token=request.args.get("page_token"),
                 label_ids=request.args.getlist("label"),
+                folder=folder,
             )
 
             messages = result.get("messages") or result.get("emails") or []
 
             _apply_local_read_state(messages, _current_user_id())
 
-            result["messages"] = messages
-
-            result["emails"] = messages
-
-            return jsonify(result)
+            return jsonify(
+                _message_payload(
+                    messages,
+                    channel="gmail",
+                    folder=folder,
+                    next_page_token=result.get("next_page_token"),
+                    total_count=result.get("total_count"),
+                    unread_count=sum(1 for message in messages if message.get("unread")),
+                )
+            )
 
         if channel == "outlook":
 
-            result = outlook_list_emails(_current_user_id(), limit=limit)
+            result = outlook_list_emails(_current_user_id(), limit=limit, folder=folder)
 
             messages = result.get("messages") or result.get("emails") or []
 
             _apply_local_read_state(messages, _current_user_id())
 
-            result["messages"] = messages
-
-            result["emails"] = messages
-
-            return jsonify(result)
+            return jsonify(
+                _message_payload(
+                    messages,
+                    channel="outlook",
+                    folder=folder,
+                    next_page_token=result.get("next_page_token"),
+                    total_count=result.get("total_count"),
+                    unread_count=sum(1 for message in messages if message.get("unread")),
+                )
+            )
 
         if channel not in {"all", "inbox"}:
 
@@ -326,27 +394,38 @@ def api_list_messages():
                 limit=limit,
                 page_token=request.args.get("page_token"),
                 label_ids=request.args.getlist("label"),
+                folder=folder,
             )
 
             messages.extend(
                 gmail_result.get("messages") or gmail_result.get("emails") or []
             )
 
+            gmail_total_count = int(gmail_result.get("total_count") or 0)
+
         except GmailConnectionError as exc:
 
             connection_errors.append(exc)
 
+            gmail_total_count = 0
+
         try:
 
-            outlook_result = outlook_list_emails(_current_user_id(), limit=limit)
+            outlook_result = outlook_list_emails(
+                _current_user_id(), limit=limit, folder=folder
+            )
 
             messages.extend(
                 outlook_result.get("messages") or outlook_result.get("emails") or []
             )
 
+            outlook_total_count = int(outlook_result.get("total_count") or 0)
+
         except OutlookConnectionError as exc:
 
             connection_errors.append(exc)
+
+            outlook_total_count = 0
 
         if not messages and len(connection_errors) == 2:
 
@@ -360,11 +439,14 @@ def api_list_messages():
             _current_user_id(),
         )
 
-        result = {
-            "emails": sorted_messages,
-            "messages": sorted_messages,
-            "next_page_token": None,
-        }
+        result = _message_payload(
+            sorted_messages,
+            channel=channel,
+            folder=folder,
+            next_page_token=None,
+            total_count=gmail_total_count + outlook_total_count,
+            unread_count=sum(1 for message in sorted_messages if message.get("unread")),
+        )
 
     except EmailServiceError as exc:
 

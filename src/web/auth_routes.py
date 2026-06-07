@@ -12,6 +12,7 @@ from urllib.parse import urlencode
 
 
 from src.db import db
+from datetime import datetime, timedelta, timezone
 
 from src.models import User, UserToken
 
@@ -39,6 +40,23 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 channel_bp = Blueprint("channels", __name__, url_prefix="/api/channels")
 
+RECOVERY_UNAVAILABLE_MESSAGE = (
+    "If that account can be recovered with security questions, you can continue."
+)
+
+SECURITY_QUESTIONS = (
+    "What city were you born in?",
+    "What is your first school's name?",
+    "What is your first school?",
+    "What was the name of your first pet?",
+    "What is your mother's maiden name?",
+    "What was your childhood nickname?",
+    "What street did you grow up on?",
+    "What was the model of your first phone?",
+    "What is your favorite teacher's name?",
+    "What is the name of your favorite book?",
+)
+
 
 def _request_data():
 
@@ -63,6 +81,54 @@ def _current_user():
         return None
 
     return db.session.get(User, user_id)
+
+
+def _has_security_recovery(user: User | None) -> bool:
+
+    return bool(
+        user
+        and user.security_question_1
+        and user.security_answer_1_hash
+        and user.security_question_2
+        and user.security_answer_2_hash
+    )
+
+
+def _valid_security_questions(q1: str, q2: str) -> bool:
+
+    return q1 in SECURITY_QUESTIONS and q2 in SECURITY_QUESTIONS and q1 != q2
+
+
+def _password_reset_context(step: str = "email", **extra):
+
+    context = {
+        "step": step,
+        "hide_site_chrome": True,
+    }
+
+    context.update(extra)
+
+    return context
+
+
+def _as_utc(value):
+
+    if value is None:
+
+        return None
+
+    if value.tzinfo is None:
+
+        return value.replace(tzinfo=timezone.utc)
+
+    return value.astimezone(timezone.utc)
+
+
+def _clear_password_reset_session():
+
+    session.pop("pw_reset_user_id", None)
+
+    session.pop("pw_reset_verified", None)
 
 
 def _gmail_token_for_user(user_id: int | None):
@@ -108,11 +174,10 @@ def _settings_context(**extra):
             "notification_sound": True,
             "dnd_schedule": "off",
             "ai_data_usage_enabled": (
-                True
-                if preference is None
-                else bool(preference.ai_data_usage_enabled)
+                True if preference is None else bool(preference.ai_data_usage_enabled)
             ),
         },
+        "security_questions": SECURITY_QUESTIONS,
     }
 
     context.update(extra)
@@ -342,7 +407,11 @@ def gmail_callback():
 @auth_bp.route("/signup", methods=["GET"])
 def signup_form():
 
-    return render_template("signup.html", hide_site_chrome=True)
+    return render_template(
+        "signup.html",
+        hide_site_chrome=True,
+        security_questions=SECURITY_QUESTIONS,
+    )
 
 
 @auth_bp.route("/signup", methods=["POST"])
@@ -354,16 +423,34 @@ def signup():
 
     password = data.get("password") or ""
 
-    if not email or not password:
+    q1 = (data.get("security_question_1") or "").strip()
+    a1 = (data.get("security_answer_1") or "").strip()
+    q2 = (data.get("security_question_2") or "").strip()
+    a2 = (data.get("security_answer_2") or "").strip()
 
+    if not email or not password or not q1 or not a1 or not q2 or not a2:
         if request.is_json:
-
-            return _json_error("Email and password are required.", 400)
-
+            return _json_error(
+                "Email, password, and two security questions/answers are required.",
+                400,
+            )
         return render_template(
             "signup.html",
-            error="Please enter email and password.",
+            error="Please enter email, password, and two security questions/answers.",
             hide_site_chrome=True,
+            security_questions=SECURITY_QUESTIONS,
+        )
+
+    if not _valid_security_questions(q1, q2):
+        if request.is_json:
+            return _json_error(
+                "Choose two different security questions from the list.", 400
+            )
+        return render_template(
+            "signup.html",
+            error="Choose two different security questions from the list.",
+            hide_site_chrome=True,
+            security_questions=SECURITY_QUESTIONS,
         )
 
     existing = User.query.filter_by(email=email).first()
@@ -378,9 +465,30 @@ def signup():
             "signup.html",
             error="This email is already registered. Please login instead.",
             hide_site_chrome=True,
+            security_questions=SECURITY_QUESTIONS,
         )
 
-    user = User(email=email, password_hash=hash_password(password))
+    if len(a1) < 3 or len(a2) < 3:
+        if request.is_json:
+            return _json_error("Security answers must be at least 3 characters.", 400)
+        return render_template(
+            "signup.html",
+            error="Security answers must be at least 3 characters.",
+            hide_site_chrome=True,
+            security_questions=SECURITY_QUESTIONS,
+        )
+
+    user_kwargs = {"email": email, "password_hash": hash_password(password)}
+    user_kwargs.update(
+        {
+            "security_question_1": q1,
+            "security_answer_1_hash": hash_password(a1),
+            "security_question_2": q2,
+            "security_answer_2_hash": hash_password(a2),
+        }
+    )
+
+    user = User(**user_kwargs)
 
     db.session.add(user)
 
@@ -696,6 +804,263 @@ def change_password():
     db.session.commit()
 
     return jsonify({"message": "Password updated successfully"}), 200
+
+
+@auth_bp.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+
+    if request.method == "GET":
+
+        return render_template(
+            "forgot_password.html",
+            **_password_reset_context("email"),
+        )
+
+    data = _request_data()
+
+    email = (data.get("email") or "").strip().lower()
+
+    if not email:
+
+        return render_template(
+            "forgot_password.html",
+            **_password_reset_context(
+                "email",
+                error="Please enter your email address.",
+            ),
+        )
+
+    user = User.query.filter_by(email=email).first()
+
+    if user is None or not _has_security_recovery(user):
+
+        return render_template(
+            "forgot_password.html",
+            **_password_reset_context(
+                "email",
+                message=RECOVERY_UNAVAILABLE_MESSAGE,
+            ),
+        )
+
+    session["pw_reset_user_id"] = user.id
+
+    session.pop("pw_reset_verified", None)
+
+    return redirect(url_for("auth.verify_security_questions"))
+
+
+@auth_bp.route("/verify-security-questions", methods=["GET", "POST"])
+def verify_security_questions():
+
+    user_id = session.get("pw_reset_user_id")
+
+    if not user_id:
+
+        return redirect(url_for("auth.forgot_password"))
+
+    user = db.session.get(User, user_id)
+
+    if user is None:
+
+        _clear_password_reset_session()
+
+        return redirect(url_for("auth.forgot_password"))
+
+    if not _has_security_recovery(user):
+
+        _clear_password_reset_session()
+
+        return redirect(url_for("auth.forgot_password"))
+
+    # Check lockout
+    now = datetime.now(timezone.utc)
+    locked_until = _as_utc(user.security_locked_until)
+    if locked_until and now < locked_until:
+        remaining = int((locked_until - now).total_seconds() // 60) + 1
+        return render_template(
+            "forgot_password.html",
+            **_password_reset_context(
+                "questions",
+                error=f"Too many attempts. Try again in {remaining} minutes.",
+                questions=(user.security_question_1, user.security_question_2),
+            ),
+        )
+
+    if request.method == "GET":
+
+        return render_template(
+            "forgot_password.html",
+            **_password_reset_context(
+                "questions",
+                questions=(user.security_question_1, user.security_question_2),
+            ),
+        )
+
+    data = _request_data()
+
+    a1 = (data.get("security_answer_1") or "").strip()
+
+    a2 = (data.get("security_answer_2") or "").strip()
+
+    if len(a1) < 1 or len(a2) < 1:
+
+        return render_template(
+            "forgot_password.html",
+            **_password_reset_context(
+                "questions",
+                error="Please answer both questions.",
+                questions=(user.security_question_1, user.security_question_2),
+            ),
+        )
+
+    ok1 = user.security_answer_1_hash and verify_password(
+        a1, user.security_answer_1_hash
+    )
+    ok2 = user.security_answer_2_hash and verify_password(
+        a2, user.security_answer_2_hash
+    )
+
+    if ok1 and ok2:
+
+        user.security_failed_attempts = 0
+
+        user.security_locked_until = None
+
+        db.session.commit()
+
+        session["pw_reset_verified"] = True
+
+        return redirect(url_for("auth.reset_password"))
+
+    # Failed attempt
+    user.security_failed_attempts = (user.security_failed_attempts or 0) + 1
+
+    if user.security_failed_attempts >= 5:
+
+        user.security_locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
+
+    db.session.commit()
+
+    msg = "Answers did not match. Please try again."
+
+    if user.security_locked_until:
+
+        msg = "Too many failed attempts. Account temporarily locked."
+
+    return render_template(
+        "forgot_password.html",
+        **_password_reset_context(
+            "questions",
+            error=msg,
+            questions=(user.security_question_1, user.security_question_2),
+        ),
+    )
+
+
+@auth_bp.route("/reset-password", methods=["GET", "POST"])
+def reset_password():
+
+    user_id = session.get("pw_reset_user_id")
+
+    if not user_id or not session.get("pw_reset_verified"):
+
+        return redirect(url_for("auth.forgot_password"))
+
+    user = db.session.get(User, user_id)
+
+    if user is None:
+
+        _clear_password_reset_session()
+
+        return redirect(url_for("auth.forgot_password"))
+
+    if request.method == "GET":
+
+        return render_template(
+            "forgot_password.html",
+            **_password_reset_context("reset"),
+        )
+
+    data = _request_data()
+
+    new_password = data.get("password") or ""
+    confirm_password = data.get("confirm_password") or ""
+
+    if len(new_password) < 8:
+
+        return render_template(
+            "forgot_password.html",
+            **_password_reset_context(
+                "reset",
+                error="Password must be at least 8 characters.",
+            ),
+        )
+
+    if new_password != confirm_password:
+
+        return render_template(
+            "forgot_password.html",
+            **_password_reset_context(
+                "reset",
+                error="Passwords do not match.",
+            ),
+        )
+
+    user.password_hash = hash_password(new_password)
+
+    _clear_password_reset_session()
+
+    db.session.commit()
+
+    return redirect(url_for("auth.login_form"))
+
+
+@auth_bp.route("/update-security-questions", methods=["POST"])
+def update_security_questions():
+
+    user = _current_user()
+
+    if user is None:
+
+        return _json_error("Unauthorized.", 401)
+
+    data = _request_data()
+
+    q1 = (data.get("security_question_1") or "").strip()
+
+    a1 = (data.get("security_answer_1") or "").strip()
+
+    q2 = (data.get("security_question_2") or "").strip()
+
+    a2 = (data.get("security_answer_2") or "").strip()
+
+    if (
+        not q1
+        or not a1
+        or not q2
+        or not a2
+        or len(a1) < 3
+        or len(a2) < 3
+        or not _valid_security_questions(q1, q2)
+    ):
+
+        return _json_error("Invalid questions or answers.", 400)
+
+    user.security_question_1 = q1
+
+    user.security_answer_1_hash = hash_password(a1)
+
+    user.security_question_2 = q2
+
+    user.security_answer_2_hash = hash_password(a2)
+
+    db.session.commit()
+
+    if request.is_json:
+
+        return jsonify({"message": "Security questions updated."})
+
+    return redirect(_dashboard_url(page="settings", tab="security"))
 
 
 @auth_bp.route("/send-message", methods=["POST"])

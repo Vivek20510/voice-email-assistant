@@ -399,6 +399,66 @@
 
           {% endif %}
 
+          <div class="signup-security-block">
+            <div class="signup-security-title">Account Recovery</div>
+            <div class="signup-security-copy">
+              Pick two questions you can answer later if you forget your
+              password.
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Security Question 1</label>
+              <select
+                name="security_question_1"
+                class="form-input form-select"
+                required
+              >
+                <option value="">Choose a question</option>
+                {% for question in security_questions %}
+                <option value="{{ question }}">{{ question }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Answer 1</label>
+              <input
+                type="text"
+                name="security_answer_1"
+                class="form-input"
+                placeholder="Your answer"
+                required
+                minlength="3"
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Security Question 2</label>
+              <select
+                name="security_question_2"
+                class="form-input form-select"
+                required
+              >
+                <option value="">Choose a different question</option>
+                {% for question in security_questions %}
+                <option value="{{ question }}">{{ question }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Answer 2</label>
+              <input
+                type="text"
+                name="security_answer_2"
+                class="form-input"
+                placeholder="Your answer"
+                required
+                minlength="3"
+              />
+            </div>
+          </div>
+
           <button type="submit" class="btn-primary">Create Account</button>
         </form>
       </div>

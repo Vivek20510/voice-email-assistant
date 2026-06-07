@@ -83,7 +83,9 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function handleNavSearch(query) {
-  const value = String(query || "").trim().toLowerCase();
+  const value = String(query || "")
+    .trim()
+    .toLowerCase();
   const rows = document.querySelectorAll(".inbox-item");
 
   rows.forEach((row) => {

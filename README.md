@@ -14,24 +14,28 @@ Designed with a stunning responsive layout, fluid CSS micro-animations, theme pe
 ## 🌟 Core Highlights
 
 ### 1. 🎙️ Voice-Command & Dictation Console
-*   **Speech-to-Text (STT):** Dictate compose forms and replies directly via your browser. Integrated with **OpenAI Whisper** for high-accuracy local transcription, accompanied by a dynamic, real-time CSS waveform visualizer.
-*   **Text-to-Speech (TTS):** Read messages aloud at the click of a button using Google's Text-to-Speech (**gTTS**) system, keeping you informed on the go.
+
+- **Speech-to-Text (STT):** Dictate compose forms and replies directly via your browser. Integrated with **OpenAI Whisper** for high-accuracy local transcription, accompanied by a dynamic, real-time CSS waveform visualizer.
+- **Text-to-Speech (TTS):** Read messages aloud at the click of a button using Google's Text-to-Speech (**gTTS**) system, keeping you informed on the go.
 
 ### 2. 🤖 Deep AI Inbox Assistant
-*   **Smart Drafting:** Draft professional replies instantly. The platform leverages a local **Qwen-2.5 (1.5B/7B)** or HuggingFace API instruction model to generate structured drafts based on short voice hints.
-*   **Thread Summarizer:** Transform long email threads or chat history into concise, readable summaries via fine-tuned **BART/T5** pipeline inference.
-*   **Suggested Reply Chips:** Read a message and instantly pick from dynamically generated smart action buttons (e.g., *Accept Invite*, *Ask for details*, *Polite Decline*) that automatically pre-fill your composer.
-*   **Multilingual Translations:** Read and reply across barriers using integrated **mBART-50** and **NLLB** models, enabling many-to-many instant translations.
+
+- **Smart Drafting:** Draft professional replies instantly. The platform leverages a local **Qwen-2.5 (1.5B/7B)** or HuggingFace API instruction model to generate structured drafts based on short voice hints.
+- **Thread Summarizer:** Transform long email threads or chat history into concise, readable summaries via fine-tuned **BART/T5** pipeline inference.
+- **Suggested Reply Chips:** Read a message and instantly pick from dynamically generated smart action buttons (e.g., _Accept Invite_, _Ask for details_, _Polite Decline_) that automatically pre-fill your composer.
+- **Multilingual Translations:** Read and reply across barriers using integrated **mBART-50** and **NLLB** models, enabling many-to-many instant translations.
 
 ### 3. 🔄 Multi-Channel Sync
-*   **Google OAuth & Gmail API:** Fully authenticated secure OAuth 2.0 flow. Synchronize real-time Gmail inbox folders, read messages, compose drafts, and send mail securely.
-*   **Microsoft Outlook Integration:** Direct API interface for fetching and dispatching Outlook mail.
-*   **Telegram Webhooks:** Connect custom Telegram bots to monitor incoming messages and reply directly from the centralized application dashboard.
+
+- **Google OAuth & Gmail API:** Fully authenticated secure OAuth 2.0 flow. Synchronize real-time Gmail inbox folders, read messages, compose drafts, and send mail securely.
+- **Microsoft Outlook Integration:** Direct API interface for fetching and dispatching Outlook mail.
+- **Telegram Webhooks:** Connect custom Telegram bots to monitor incoming messages and reply directly from the centralized application dashboard.
 
 ### 4. 🎨 Sleek, Responsive Interface
-*   **Dynamic Theme Toggle:** Instantly switch between premium, harmonious Dark Mode and Light Mode with settings persisted across sessions in `localStorage`.
-*   **Glassmorphism Panels:** Modern, translucent card aesthetics with sophisticated layout densities and smooth micro-animations.
-*   **Fluid SPA Router:** Zero-latency Single Page Application feel, built with Vanilla JavaScript and decoupled CSS modules.
+
+- **Dynamic Theme Toggle:** Instantly switch between premium, harmonious Dark Mode and Light Mode with settings persisted across sessions in `localStorage`.
+- **Glassmorphism Panels:** Modern, translucent card aesthetics with sophisticated layout densities and smooth micro-animations.
+- **Fluid SPA Router:** Zero-latency Single Page Application feel, built with Vanilla JavaScript and decoupled CSS modules.
 
 ---
 
@@ -132,32 +136,37 @@ voice-email-assistant/
 Get your voice email assistant up and running in minutes.
 
 ### 📋 Prerequisites
+
 Ensure you have the following installed on your machine:
-*   **Python:** Version `3.10` or `3.11`
-*   **FFmpeg:** Required for processing recorded audio formats (Whisper processing)
-*   **uroman:** Installed from `requirements.txt` for MMS-TTS languages that require romanization
-*   *(Optional)* **Docker Desktop:** For simple, containerized execution
+
+- **Python:** Version `3.10` or `3.11`
+- **FFmpeg:** Required for processing recorded audio formats (Whisper processing)
+- **uroman:** Installed from `requirements.txt` for MMS-TTS languages that require romanization
+- _(Optional)_ **Docker Desktop:** For simple, containerized execution
 
 ### 🚀 Standard Setup
+
 1.  **Clone the Repository:**
+
     ```bash
     git clone https://github.com/Vivek20510/voice-email-assistant.git
     cd voice-email-assistant
     ```
 
 2.  **Create & Activate a Virtual Environment:**
-    *   **macOS / Linux:**
-        ```bash
-        python3 -m venv venv
-        source venv/bin/activate
-        ```
-    *   **Windows:**
-        ```powershell
-        python -m venv venv
-        .\venv\Scripts\Activate.ps1
-        ```
+    - **macOS / Linux:**
+      ```bash
+      python3 -m venv venv
+      source venv/bin/activate
+      ```
+    - **Windows:**
+      ```powershell
+      python -m venv venv
+      .\venv\Scripts\Activate.ps1
+      ```
 
 3.  **Install Required Dependencies:**
+
     ```bash
     pip install --upgrade pip
     pip install -r requirements.txt
@@ -165,13 +174,16 @@ Ensure you have the following installed on your machine:
 
 4.  **Configure Environment Variables:**
     Duplicate the provided template `.env.example` to create a working config:
+
     ```bash
     cp .env.example .env
     ```
-    *Open the `.env` file and insert your respective credentials (see [Configuration](#-configuration)).*
+
+    _Open the `.env` file and insert your respective credentials (see [Configuration](#-configuration))._
 
 5.  **Initialize the Database:**
     Open a Python terminal and run:
+
     ```python
     from src.app import app
     from src.db import db
@@ -183,7 +195,7 @@ Ensure you have the following installed on your machine:
     ```bash
     python run.py
     ```
-    *Navigate to `http://127.0.0.1:5000` in your web browser.*
+    _Navigate to `http://127.0.0.1:5000` in your web browser._
 
 ---
 
@@ -192,6 +204,7 @@ Ensure you have the following installed on your machine:
 The application features a fully optimized Docker environment suitable for fast deployments.
 
 1.  **Build the Container:**
+
     ```bash
     docker build -t voice-email-assistant .
     ```
@@ -200,31 +213,31 @@ The application features a fully optimized Docker environment suitable for fast 
     ```bash
     docker run -p 5000:5000 --env-file .env voice-email-assistant
     ```
-    *Access the application at `http://localhost:5000`.*
+    _Access the application at `http://localhost:5000`._
 
 ---
 
 ## ⚙️ Configuration (.env Reference)
 
-| Key | Description | Default Value |
-| :--- | :--- | :--- |
-| `FLASK_SECRET_KEY` | Secure session hashing key | `replace-with-a-secure-secret` |
-| `DATABASE_URL` | SQLite / PostgreSQL connection URI | `sqlite:///data.db` |
-| `GOOGLE_CLIENT_ID` | Google OAuth Client ID credentials | *(Get from Google Console)* |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth Secret key credentials | *(Get from Google Console)* |
-| `GOOGLE_LOGIN_REDIRECT_URI` | Auth redirect callback path | `http://127.0.0.1:5000/auth/callback` |
-| `GOOGLE_GMAIL_REDIRECT_URI`| Gmail sync redirect callback path | `http://127.0.0.1:5000/auth/gmail/callback` |
-| `HF_TOKEN` | HuggingFace Access Token | *(Required for HF pipeline downloads)* |
-| `WHISPER_MODEL_SIZE` | OpenAI Whisper local model download size | `tiny.en` |
-| `HF_WHISPER_MODEL` | HuggingFace Whisper model path | `openai/whisper-small` |
-| `HF_MODEL_NAME` | Instruction drafting LLM | `Qwen/Qwen2.5-1.5B-Instruct` |
-| `TRANSLATION_HF_MODEL` | HuggingFaceTranslation model path | `facebook/mbart-large-50-many-to-many-mmt`|
-| `TTS_HF_TOKEN` | Optional Hugging Face token override for hosted MMS-TTS fallback | Uses `HF_TOKEN` |
-| `TTS_LOCAL_CACHE_PATH` | Optional local cache directory for MMS-TTS checkpoints | Hugging Face default cache |
-| `TTS_LOCAL_ENABLED` | Try local MMS-TTS inference before hosted inference | `true` |
-| `TTS_HF_ENABLED` | Allow hosted MMS-TTS fallback | `true` |
-| `TTS_HF_TIMEOUT_SECONDS` | Hosted MMS-TTS request timeout | `30` |
-| `TTS_MAX_TEXT_CHARS` | Maximum Read aloud request length | `4000` |
+| Key                         | Description                                                      | Default Value                               |
+| :-------------------------- | :--------------------------------------------------------------- | :------------------------------------------ |
+| `FLASK_SECRET_KEY`          | Secure session hashing key                                       | `replace-with-a-secure-secret`              |
+| `DATABASE_URL`              | SQLite / PostgreSQL connection URI                               | `sqlite:///data.db`                         |
+| `GOOGLE_CLIENT_ID`          | Google OAuth Client ID credentials                               | _(Get from Google Console)_                 |
+| `GOOGLE_CLIENT_SECRET`      | Google OAuth Secret key credentials                              | _(Get from Google Console)_                 |
+| `GOOGLE_LOGIN_REDIRECT_URI` | Auth redirect callback path                                      | `http://127.0.0.1:5000/auth/callback`       |
+| `GOOGLE_GMAIL_REDIRECT_URI` | Gmail sync redirect callback path                                | `http://127.0.0.1:5000/auth/gmail/callback` |
+| `HF_TOKEN`                  | HuggingFace Access Token                                         | _(Required for HF pipeline downloads)_      |
+| `WHISPER_MODEL_SIZE`        | OpenAI Whisper local model download size                         | `tiny.en`                                   |
+| `HF_WHISPER_MODEL`          | HuggingFace Whisper model path                                   | `openai/whisper-small`                      |
+| `HF_MODEL_NAME`             | Instruction drafting LLM                                         | `Qwen/Qwen2.5-1.5B-Instruct`                |
+| `TRANSLATION_HF_MODEL`      | HuggingFaceTranslation model path                                | `facebook/mbart-large-50-many-to-many-mmt`  |
+| `TTS_HF_TOKEN`              | Optional Hugging Face token override for hosted MMS-TTS fallback | Uses `HF_TOKEN`                             |
+| `TTS_LOCAL_CACHE_PATH`      | Optional local cache directory for MMS-TTS checkpoints           | Hugging Face default cache                  |
+| `TTS_LOCAL_ENABLED`         | Try local MMS-TTS inference before hosted inference              | `true`                                      |
+| `TTS_HF_ENABLED`            | Allow hosted MMS-TTS fallback                                    | `true`                                      |
+| `TTS_HF_TIMEOUT_SECONDS`    | Hosted MMS-TTS request timeout                                   | `30`                                        |
+| `TTS_MAX_TEXT_CHARS`        | Maximum Read aloud request length                                | `4000`                                      |
 
 ### MMS Read Aloud Notes
 
@@ -239,13 +252,17 @@ The MMS-TTS checkpoints use the `CC-BY-NC-4.0` license. Review the model license
 Our codebase contains comprehensive unit and integration tests.
 
 ### Running Test Suite
+
 Execute the testing suite with:
+
 ```bash
 pytest
 ```
 
 ### Viewing Code Coverage
+
 Run pytest with coverage report to evaluate covered lines:
+
 ```bash
 pytest --cov=src --cov-report=term-missing
 ```
@@ -255,6 +272,7 @@ pytest --cov=src --cov-report=term-missing
 ## 🤝 Contribution Guidelines
 
 We welcome contributions to the **Voice-Based Email & Messaging Assistant**!
+
 1.  **Branching Strategy:** Cut features from `dev` using `feature/your-feature-name` naming schemas.
 2.  **Code Styling:** Run Prettier on HTML/CSS/JS configurations and keep Python files PEP8 compliant.
 3.  **Pull Requests:** Target `dev` for initial merges. Ensure your pipeline builds green and is supported by corresponding unit tests.
@@ -262,4 +280,5 @@ We welcome contributions to the **Voice-Based Email & Messaging Assistant**!
 ---
 
 ## 📄 License
+
 This project is licensed under the [MIT License](LICENSE) — see the root license file for usage specifications.
